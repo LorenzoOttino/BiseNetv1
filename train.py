@@ -99,14 +99,17 @@ def train(args, model, optimizer, dataloader_train, dataloader_val, curr_epoch):
         if epoch % args.checkpoint_step == 0 and epoch != 0:
             if not os.path.isdir(args.save_model_path):
                 os.mkdir(args.save_model_path)
-            torch.save(model.module.state_dict(),
-                       os.path.join(args.save_model_path, 'latest_dice_loss.pth'))
+            state = {
+                "epoch": epoch,
+                "model_state": model.module.state_dict(),
+                "optimizer": optimizer.state_dict()
+            }
+            torch.save(state, os.path.join(args.save_model_path, 'latest_dice_loss.pth'))
 
         if epoch % args.validation_step == 0 and epoch != 0:
             precision, miou = val(args, model, dataloader_val)
             if miou > max_miou:
                 max_miou = miou
-                import os 
                 os.makedirs(args.save_model_path, exist_ok=True)
                 state = {
                     "epoch": epoch,
@@ -213,11 +216,11 @@ if __name__ == '__main__':
         '--num_classes', '12',
         '--cuda', '0',
         '--batch_size', '8',
-        '--save_model_path', './checkpoints_101_sgd',
-        '--context_path', 'resnet101',  # set resnet18 or resnet101, only support resnet18 and resnet101
+        '--save_model_path', './checkpoints_18_sgd',
+        '--context_path', 'resnet18',  # set resnet18 or resnet101, only support resnet18 and resnet101
         '--optimizer', 'sgd',
-        #'--pretrained_model_path', './checkpoints_101_sgd/best_dice_loss.pth',
-        '--checkpoint_step', '30'
+        #'--pretrained_model_path', './checkpoints_18_sgd/latest_dice_loss.pth',
+        '--checkpoint_step', '5'
 
     ]
     main(params)
