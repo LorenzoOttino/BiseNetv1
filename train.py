@@ -105,6 +105,7 @@ def train(args, model, optimizer, dataloader_train, dataloader_val, curr_epoch):
                 "optimizer": optimizer.state_dict()
             }
             torch.save(state, os.path.join(args.save_model_path, 'latest_dice_loss.pth'))
+            print("*** epoch " + str(epoch) + " saved as recent checkpoint!!!")
 
         if epoch % args.validation_step == 0 and epoch != 0:
             precision, miou = val(args, model, dataloader_val)
@@ -117,6 +118,7 @@ def train(args, model, optimizer, dataloader_train, dataloader_val, curr_epoch):
                     "optimizer": optimizer.state_dict()
                 }
                 torch.save(state, os.path.join(args.save_model_path, 'best_dice_loss.pth'))
+                print("*** epoch " + str(epoch) + " saved as best checkpoint!!!")
             writer.add_scalar('epoch/precision_val', precision, epoch)
             writer.add_scalar('epoch/miou val', miou, epoch)
 
