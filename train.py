@@ -69,7 +69,7 @@ def train(args, model, optimizer, dataloader_train, dataloader_val, curr_epoch):
         loss_func = torch.nn.CrossEntropyLoss()
     max_miou = 0
     step = 0
-    for epoch in range(curr_epoch, args.num_epochs):
+    for epoch in range(curr_epoch + 1, args.num_epochs + 1): #added +1 shift to finish with an eval
         lr = poly_lr_scheduler(optimizer, args.learning_rate, iter=epoch, max_iter=args.num_epochs)
         model.train()
         tq = tqdm.tqdm(total=len(dataloader_train) * args.batch_size)
