@@ -11,9 +11,12 @@ import random
 import imgaug.augmenters as iaa
 
 def augmentation(image, label):
-    # augment images with spatial transformation: Flip, Affine, Rotation, etc...
-    return image, label
 
+    HorizontalFlip = iaa.Fliplr(0.5)
+    
+    image = HorizontalFlip.augment_image(image)
+    label = HorizontalFlip.augment_image(label)
+    # augment images with spatial transformation: Flip, Affine, Rotation, etc...
 
 def augmentation_pixel(image):
     # augment images with pixel intensity transformation: GaussianBlur, Multiply, etc...
