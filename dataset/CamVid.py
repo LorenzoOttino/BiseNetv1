@@ -8,6 +8,7 @@ import pandas as pd
 import numpy as np
 from utils import get_label_info, one_hot_it, RandomCrop, reverse_one_hot, one_hot_it_v11, one_hot_it_v11_dice
 import random
+import imgaug.augmenters as iaa
 
 def augmentation(image, label):
     # augment images with spatial transformation: Flip, Affine, Rotation, etc...
@@ -16,6 +17,9 @@ def augmentation(image, label):
 
 def augmentation_pixel(image):
     # augment images with pixel intensity transformation: GaussianBlur, Multiply, etc...
+    #Gaussian blur
+    blur = iaa.GaussianBlur(sigma=(1,2))
+    image = blur.augment_image(image)
     return image
 
 
@@ -102,7 +106,8 @@ class CamVid(torch.utils.data.Dataset):
         # augment pixel image
         if self.mode == 'train':
             # set a probability of 0.5
-            img = augmentation_pixel(img)
+            if random.randint(0,1) == 1:
+              img = augmentation_pixel(img)
 
         # image -> [C, H, W]
         img = Image.fromarray(img)
