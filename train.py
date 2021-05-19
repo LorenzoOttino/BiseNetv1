@@ -13,6 +13,9 @@ from utils import reverse_one_hot, compute_global_accuracy, fast_hist, \
     per_class_iu
 from loss import DiceLoss
 
+# clear the cache to train ResnNet 101 
+
+# torch.cuda.empty_cache()
 
 def val(args, model, dataloader):
     print('start val!')
