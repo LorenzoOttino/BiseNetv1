@@ -17,6 +17,7 @@ def augmentation(image, label):
     image = HorizontalFlip.augment_image(image)
     label = HorizontalFlip.augment_image(label)
     # augment images with spatial transformation: Flip, Affine, Rotation, etc...
+    return image, label
 
 def augmentation_pixel(image):
     # augment images with pixel intensity transformation: GaussianBlur, Multiply, etc...
