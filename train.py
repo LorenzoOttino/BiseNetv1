@@ -13,6 +13,9 @@ from utils import reverse_one_hot, compute_global_accuracy, fast_hist, \
     per_class_iu
 from loss import DiceLoss
 
+from torch.cuda import amp
+
+scaler = amp.GradScaler() 
 # clear the cache to train ResnNet 101 
 
 # torch.cuda.empty_cache()
@@ -79,19 +82,26 @@ def train(args, model, optimizer, dataloader_train, dataloader_val, curr_epoch):
         tq.set_description('epoch %d, lr %f' % (epoch, lr))
         loss_record = []
         for i, (data, label) in enumerate(dataloader_train):
-            if torch.cuda.is_available() and args.use_gpu:
-                data = data.cuda()
-                label = label.cuda()
-            output, output_sup1, output_sup2 = model(data)
-            loss1 = loss_func(output, label)
-            loss2 = loss_func(output_sup1, label)
-            loss3 = loss_func(output_sup2, label)
-            loss = loss1 + loss2 + loss3
+            with amp.autocast() :
+                if torch.cuda.is_available() and args.use_gpu:
+                    data = data.cuda()
+                    label = label.cuda()
+                output, output_sup1, output_sup2 = model(data)
+                loss1 = loss_func(output, label)
+                loss2 = loss_func(output_sup1, label)
+                loss3 = loss_func(output_sup2, label)
+                loss = loss1 + loss2 + loss3
+              
             tq.update(args.batch_size)
             tq.set_postfix(loss='%.6f' % loss)
             optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+
+            scaler.scale(loss).backward()
+
+            scaler.step(optimizer)
+
+            scaler.update()
+
             step += 1
             writer.add_scalar('loss_step', loss, step)
             loss_record.append(loss.item())
@@ -214,17 +224,17 @@ def main(params):
 
 if __name__ == '__main__':
     params = [
-        '--num_epochs', '50',
+        '--num_epochs', '100',
         '--learning_rate', '2.5e-2',
         '--data', './CamVid',
         '--num_workers', '8',
         '--num_classes', '12',
         '--cuda', '0',
         '--batch_size', '8',
-        '--save_model_path', './checkpoints_18_sgd',
-        '--context_path', 'resnet18',  # set resnet18 or resnet101, only support resnet18 and resnet101
+        '--save_model_path', './checkpoints_101_sgd',
+        '--context_path', 'resnet101',  # set resnet18 or resnet101, only support resnet18 and resnet101
         '--optimizer', 'sgd',
-        #'--pretrained_model_path', './checkpoints_18_sgd/latest_dice_loss.pth',
+        #'--pretrained_model_path', './checkpoints_101_sgd/latest_dice_loss.pth',
         '--checkpoint_step', '5'
 
     ]
