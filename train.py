@@ -2,6 +2,7 @@ import argparse
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 from dataset.CamVid import CamVid
+from dataset.IDDA import IDDA
 import os
 from model.build_BiSeNet import BiSeNet
 import torch
@@ -150,7 +151,8 @@ def main(params):
     parser.add_argument('--context_path', type=str, default="resnet101",
                         help='The context path model you are using, resnet18, resnet101.')
     parser.add_argument('--learning_rate', type=float, default=0.01, help='learning rate used for train')
-    parser.add_argument('--data', type=str, default='', help='path of training data')
+    parser.add_argument('--data_CamVid', type=str, default='', help='path of training data_CamVid')
+    parser.add_argument('--data_IDDA', type=str, default='', help='path of training data_IDDA')
     parser.add_argument('--num_workers', type=int, default=4, help='num of workers')
     parser.add_argument('--num_classes', type=int, default=32, help='num of object classes (with void)')
     parser.add_argument('--cuda', type=str, default='0', help='GPU ids used for training')
@@ -162,30 +164,45 @@ def main(params):
 
     args = parser.parse_args(params)
 
-    # create dataset and dataloader
-    train_path = [os.path.join(args.data, 'train'), os.path.join(args.data, 'val')]
-    train_label_path = [os.path.join(args.data, 'train_labels'), os.path.join(args.data, 'val_labels')]
-    test_path = os.path.join(args.data, 'test')
-    test_label_path = os.path.join(args.data, 'test_labels')
-    csv_path = os.path.join(args.data, 'class_dict.csv')
-    dataset_train = CamVid(train_path, train_label_path, csv_path, scale=(args.crop_height, args.crop_width),
+    # create dataset and dataloader for CamVid
+    CamVid_train_path = [os.path.join(args.data_CamVid, 'train'), os.path.join(args.data_CamVid, 'val')]
+    CamVid_train_label_path = [os.path.join(args.data_CamVid, 'train_labels'), os.path.join(args.data_CamVid, 'val_labels')]
+    CamVid_test_path = os.path.join(args.data_CamVid, 'test')
+    CamVid_test_label_path = os.path.join(args.data_CamVid, 'test_labels')
+    CamVid_csv_path = os.path.join(args.data_CamVid, 'class_dict.csv')
+    CamVid_dataset_train = CamVid(CamVid_train_path, CamVid_train_label_path, CamVid_csv_path, scale=(args.crop_height, args.crop_width),
                            loss=args.loss, mode='train')
-    dataloader_train = DataLoader(
-        dataset_train,
+    CamVid_dataloader_train = DataLoader(
+        CamVid_dataset_train,
         batch_size=args.batch_size,
         shuffle=True,
         num_workers=args.num_workers,
         drop_last=True
     )
-    dataset_val = CamVid(test_path, test_label_path, csv_path, scale=(args.crop_height, args.crop_width),
+    CamVid_dataset_val = CamVid(CamVid_test_path, CamVid_test_label_path, CamVid_csv_path, scale=(args.crop_height, args.crop_width),
                          loss=args.loss, mode='test')
-    dataloader_val = DataLoader(
-        dataset_val,
+    CamVid_dataloader_val = DataLoader(
+        CamVid_dataset_val,
         # this has to be 1
         batch_size=1,
         shuffle=True,
         num_workers=args.num_workers
     )
+
+    # create dataset and dataloader for IDDA
+    IDDA_path = [os.path.join(args.data_IDDA, 'rgb')]
+    IDDA_label_path = [os.path.join(args.data_IDDA, 'labels')]
+    IDDA_csv_path = os.path.join(args.data_IDDA, 'classes_info.json')
+    IDDA_dataset = IDDA(IDDA_path, IDDA_label_path, IDDA_csv_path, scale=(args.crop_height, args.crop_width),
+                           loss=args.loss, mode='train')
+    IDDA_dataloader = DataLoader(
+        IDDA_dataset,
+        batch_size=args.batch_size,
+        shuffle=True,
+        num_workers=args.num_workers,
+        drop_last=True
+    )
+
 
     # build model
     os.environ['CUDA_VISIBLE_DEVICES'] = args.cuda
@@ -217,7 +234,7 @@ def main(params):
         print('Done!')
 
     # train
-    train(args, model, optimizer, dataloader_train, dataloader_val, curr_epoch)
+    train(args, model, optimizer, CamVid_dataloader_train, CamVid_dataloader_val, curr_epoch)
 
     # val(args, model, dataloader_val, csv_path)
 
@@ -226,7 +243,8 @@ if __name__ == '__main__':
     params = [
         '--num_epochs', '100',
         '--learning_rate', '2.5e-2',
-        '--data', './CamVid',
+        '--data_CamVid', './CamVid',
+        '--data_IDDA', './IDDA',
         '--num_workers', '8',
         '--num_classes', '12',
         '--cuda', '0',
