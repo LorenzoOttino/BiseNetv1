@@ -7,6 +7,7 @@ import pandas as pd
 import random
 import numbers
 import torchvision
+import json
 
 def poly_lr_scheduler(optimizer, init_lr, iter, lr_decay_iter=1,
                       max_iter=300, power=0.9):
@@ -178,6 +179,7 @@ class RandomCrop(object):
 		size (sequence or int): Desired output size of the crop. If size is an
 			int instead of sequence like (h, w), a square crop (size, size) is
 			made.
+		seed (int): Random seed number
 		padding (int or sequence, optional): Optional padding on each border
 			of the image. Default is 0, i.e no padding. If a sequence of length
 			4 is provided, it is used to pad left, top, right, bottom borders
@@ -293,3 +295,8 @@ def group_weight(weight_group, module, norm_layer, lr):
 	weight_group.append(dict(params=group_decay, lr=lr))
 	weight_group.append(dict(params=group_no_decay, weight_decay=.0, lr=lr))
 	return weight_group
+
+def get_Idda_info(info_path):
+	with open(info_path) as fp:
+		obj = json.load(fp)
+	return obj
