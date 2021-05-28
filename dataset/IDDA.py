@@ -90,6 +90,7 @@ class IDDA(torch.utils.data.Dataset):
         label_CamVid = np.ones(label_IDDA.shape, dtype=np.uint8) * 255
 
         for i in range(len(self.dataset_info['label2camvid'])):
-            label_copy[label_IDDA[:,:,0] == self.dataset_info['label2camvid'][i][0]] = self.toCamVidDict[self.dataset_info['label2camvid'][i][1]]
+            mask = label_IDDA[:,:,0] == self.dataset_info['label2camvid'][i][0]
+            label_CamVid[mask] = self.toCamVidDict[self.dataset_info['label2camvid'][i][1]]
         
         return label_CamVid
