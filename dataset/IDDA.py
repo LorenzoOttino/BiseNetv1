@@ -2,36 +2,39 @@ import torch
 import os
 from torchvision import transforms
 import glob
-from utils import get_Idda_info, RandomCrop, one_hot_it_v11_dice, one_hot_it_v11
+from utils import get_Idda_info, get_label_info, RandomCrop, one_hot_it_v11_dice, one_hot_it_v11
 from PIL import Image
 import numpy as np
 from CamVid import augmentation, augmentation_pixel
 import random
 
 class IDDA(torch.utils.data.Dataset):
-    def __init__(self, images_path, labels_path, info_path, scale):
+    def __init__(self, images_path, labels_path, info_path, csv_path, scale, loss='dice'):
         """
         Args:
             images_path (string): path to images folder
             labels_path (string): path to labels folder
             info_path (string): path to info json file
+            csv_path (string): path to CamVid csv file
             scale (int, int): desired shape of the image
+            loss (string): type of loss to use - either 'dice' or 'crossentropy'
         """
         super().__init__()
         self.images = []
         self.labels = []
-        self.label_info = get_Idda_info(info_path)
+        self.dataset_info = get_Idda_info(info_path)
         self.shape = scale
         self.scale = [0.5, 1, 1.25, 1.5, 1.75, 2] #as in CamVid class
         #loading dictionary for labels translation
         self.toCamVidDict = { 0: [  0, 128, 192], 1:[128,   0,   0], 2:[ 64,   0, 128], 3:[192, 192, 128], 4:[ 64,  64, 128],
         5:[ 64,  64,   0], 6:[128,  64, 128], 7:[  0,   0, 192], 8:[192, 128, 128], 9:[128, 128, 128], 10:[128, 128,   0], 255:[255, 255, 255]}
-
+        self.label_info = get_label_info(csv_path)
         #creating lists of images and labels
         self.images.extend(glob.glob(os.path.join(images_path, '*.jpg')))
         self.images.sort()
         self.labels.extend(glob.glob(os.path.join(labels_path, '*.png')))
         self.labels.sort()
+        self.loss = loss
 
         #transformations pipeline to transform image to tensor
         self.to_tensor = transforms.Compose([
@@ -86,7 +89,7 @@ class IDDA(torch.utils.data.Dataset):
     def __toCamVid(self, label_IDDA):
         label_CamVid = np.ones(label_IDDA.shape, dtype=np.uint8) * 255
 
-        for i in range(len(self.label_info['label2camvid'])):
-            label_copy[label_IDDA[:,:,0] == self.label_info['label2camvid'][i][0]] = self.toCamVidDict[self.label_info['label2camvid'][i][1]]
+        for i in range(len(self.dataset_info['label2camvid'])):
+            label_copy[label_IDDA[:,:,0] == self.dataset_info['label2camvid'][i][0]] = self.toCamVidDict[self.dataset_info['label2camvid'][i][1]]
         
         return label_CamVid
