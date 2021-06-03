@@ -24,7 +24,7 @@ class IDDA(torch.utils.data.Dataset):
         self.labels = []
         self.dataset_info = get_Idda_info(info_path)
         self.shape = scale
-        self.scale = [0.5, 1, 1.25, 1.5, 1.75, 2] #as in CamVid class
+        self.scale = [0.5, 1, 1.25, 1.5, 1.75, 2]
         #loading dictionary for labels translation
         self.toCamVidDict = { 0: [  0, 128, 192], 1:[128,   0,   0], 2:[ 64,   0, 128], 3:[192, 192, 128], 4:[ 64,  64, 128],
         5:[ 64,  64,   0], 6:[128,  64, 128], 7:[  0,   0, 192], 8:[192, 128, 128], 9:[128, 128, 128], 10:[128, 128,   0], 255:[255, 255, 255]}
@@ -43,9 +43,11 @@ class IDDA(torch.utils.data.Dataset):
             ])
 
     def __getitem__(self, index):
+        #open image and label
         img = Image.open(self.images[index])
         label = Image.open(self.labels[index]).convert("RGB")
 
+        #resize image and label, then crop them
         scale = random.choice(self.scale)
         scale = (int(self.shape[0] * scale), int(self.shape[1] * scale))
 
@@ -57,9 +59,11 @@ class IDDA(torch.utils.data.Dataset):
         label = transforms.Resize(scale, Image.NEAREST)(label)
         label = RandomCrop(self.shape, seed, pad_if_needed=True)(label)
         label = np.array(label)
+        
+        #translete to CamVid color palette
         label = self.__toCamVid(label)
 
-        #applying same augmentation as in CamVid
+        #apply augmentation
         img, label = augmentation(img, label)
         if random.randint(0,1) == 1:
               img = augmentation_pixel(img)
@@ -67,7 +71,7 @@ class IDDA(torch.utils.data.Dataset):
         img = Image.fromarray(img)
         img = self.to_tensor(img).float()
 
-        #computing losses as in CamVid
+        #computing losses
         if self.loss == 'dice':
             # label -> [num_classes, H, W]
             label = one_hot_it_v11_dice(label, self.label_info).astype(np.uint8)
