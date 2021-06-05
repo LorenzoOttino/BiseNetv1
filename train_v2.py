@@ -257,7 +257,7 @@ def main(params):
     parser.add_argument('--pretrained_model_path', type=str, default=None, help='path to pretrained model')
     parser.add_argument('--save_model_path', type=str, default=None, help='path to save model')
     parser.add_argument('--optimizer_G', type=str, default='rmsprop', help='optimizer_G, support rmsprop, sgd, adam')  
-    parser.add_argument('--optimizer_D', type=str, default='rmsprop', help='optimizer_G, support rmsprop, sgd, adam')
+    parser.add_argument('--optimizer_D', type=str, default='rmsprop', help='optimizer_D, support rmsprop, sgd, adam')
     parser.add_argument('--loss', type=str, default='dice', help='loss function, dice or crossentropy')
 
     args = parser.parse_args(params)
@@ -368,10 +368,11 @@ if __name__ == '__main__':
         '--num_classes', '12',
         '--cuda', '0',
         '--batch_size', '8',
-        '--save_model_path', './checkpoints_101_sgd',
+        '--save_model_path', './checkpoints_adversarial',  # modify this to your path
         '--context_path', 'resnet101',  # set resnet18 or resnet101, only support resnet18 and resnet101
-        '--optimizer', 'sgd',
-        # '--pretrained_model_path', './checkpoints_101_sgd/latest_dice_loss.pth',
+        '--optimizer_G', 'sgd',
+        '--optimizer_D', 'adam',
+        # '--pretrained_model_path', './checkpoints_adversarial/latest_dice_loss.pth',   # modify this to your path
         '--checkpoint_step', '5'
 
     ]
