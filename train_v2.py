@@ -1,12 +1,13 @@
 import argparse
 from torch.utils.data import Dataset
+from torch.autograd import Variable
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
 from dataset.CamVid import CamVid
 from dataset.IDDA import IDDA
 import os
 from model.build_BiSeNet import BiSeNet
-from moel.discriminator import discriminator
+from model.discriminator import Discriminator 
 import torch
 from tensorboardX import SummaryWriter
 import tqdm
@@ -25,11 +26,11 @@ scaler = amp.GradScaler()
 
 # torch.cuda.empty_cache()
 
-def val(args, model, dataloader):
+def val(args, model_G,dataloader ):
     print('start val!')
     # label_info = get_label_info(csv_path)
     with torch.no_grad():
-        model.eval()
+        model_G.eval()
         precision_record = []
         hist = np.zeros((args.num_classes, args.num_classes))
         for i, (data, label) in enumerate(dataloader):
@@ -38,7 +39,7 @@ def val(args, model, dataloader):
                 label = label.cuda()
 
             # get RGB predict image
-            predict = model(data).squeeze()
+            predict = model_G(data).squeeze()
             predict = reverse_one_hot(predict)
             predict = np.array(predict.cpu())
 
@@ -72,8 +73,9 @@ def val(args, model, dataloader):
         return precision, miou
 
 
-def train(args, model_G, model_D, optimizer_G, optimizer_D, dataloader_train, dataloader_val, IDDA_dataloader, curr_epoch):
-    writer = SummaryWriter(comment=''.format(args.optimizer_G, args.context_path))#not important for now
+def train(args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_train, CamVid_dataloader_val, IDDA_dataloader, curr_epoch): 
+# we need the camvid data loader an modify the dataloadrer val we don't need the data loader train because we use Idda dataloader 
+    writer = SummaryWriter(comment=''.format(args.optimizer_G,args.optimizer_D, args.context_path))#not important for now
     if args.loss_G == 'dice':
         loss_func_G = DiceLoss()
     elif args.loss_G == 'crossentropy':
@@ -88,29 +90,33 @@ def train(args, model_G, model_D, optimizer_G, optimizer_D, dataloader_train, da
     max_miou = 0
     step = 0
     for epoch in range(curr_epoch + 1, args.num_epochs + 1):  # added +1 shift to finish with an eval
-        lr_G = poly_lr_scheduler(optimizer_G, args.learning_rate, iter=epoch, max_iter=args.num_epochs) #not important for now
-        lr_D = poly_lr_scheduler(optimizer_D, args.learning_rate, iter=epoch, max_iter=args.num_epochs)#not important for now
+        lr_G = poly_lr_scheduler(optimizer_G, args.learning_rate, iter=epoch, max_iter=args.num_epochs)
+        lr_D = poly_lr_scheduler(optimizer_D, args.learning_rate, iter=epoch, max_iter=args.num_epochs)
         model_G.train()
         model_D.train()
-        tq = tqdm.tqdm(total=len(dataloader_train) * args.batch_size) #not important for now
-        tq.set_description('epoch %d, lr %f' % (epoch, lr)) # not important for now
+        tq = tqdm.tqdm(total=len(IDDA_dataloader) * args.batch_size) 
+        tq.set_description('epoch %d, lr_G %f , lr_D %f' % (epoch, lr_G ,lr_D )) 
 
         ## set the ground truth for the discriminator
         source_label = 0
         target_label = 1
         # iniate lists to track the losses 
         loss_G_record = []
-        loss_adv_record = []  ## we added a new list to track the advarsirial loss
-        loss_D_record = []
+        loss_adv_record = []  ## we added a new list to track the advarsirial loss of generator
+        loss_D_record = []     ## we added a new list to track the discriminator loss 
         
-        source_train_loader = enumerate(dataloader_train)
+        source_train_loader = enumerate(IDDA_dataloader)
         s_size = len(list(source_train_loader))
-        target_loader = enumarate(IDDA_dataloader)
-        t_size = len(list(target_loader))
+        target_loader = enumerate(CamVid_dataloader_train)
+        t_size = len(list(CamVid_dataloader_train))
 
-        for i in range(t_size):
-            if(i % s_size == 0):
-                source_train_loader = enumerate(dataloader_train)
+        for i in range(s_size):  
+            if(i % t_size == 0):
+                target_loader = enumerate(CamVid_dataloader_train)
+        
+            optimizer_G.zero_grad()
+            optimizer_D.zero_grad()
+
 
         #train G:
         
@@ -137,14 +143,14 @@ def train(args, model_G, model_D, optimizer_G, optimizer_D, dataloader_train, da
             #train with target:
 
             _, batch = target_loader.next()
-            data, label, = batch
+            data, _ = batch  
 
             with amp.autocast():
                 if torch.cuda.is_available() and args.use_gpu:
                     data = data.cuda()
                 output_t, output_sup1, output_sup2 = model_G(data)
                 D_out = model_D(F.softmax(output_t))
-                loss_adv = loss_func_adv(D_out , Variable(torch.FloatTensor(D_out.data.size()).fill_(source_label)).cuda() )
+                loss_adv = loss_func_adv(D_out , Variable(torch.FloatTensor(D_out.data.size()).fill_(source_label)).cuda() )  # I MIDIFIED THOSE TRY TO FOOL THE DISC
 
             scaler.scale(loss_adv).backward()
 
@@ -157,7 +163,7 @@ def train(args, model_G, model_D, optimizer_G, optimizer_D, dataloader_train, da
             output_s = output_s.detach()
             with amp.autocast():
                 D_out = model_D(F.softmax(output_s))  ## we feed the discriminator with the output of the model
-                loss_D = loss_func_D(D_out, Variable(torch.FloatTensor(D_out.data.size()).fill_(target_label)).cuda())  ## add the adversarial loss
+                loss_D = loss_func_D(D_out, Variable(torch.FloatTensor(D_out.data.size()).fill_(source_label)).cuda())   # add the adversarial loss
             scaler.scale(loss_D).backward()
 
             #train with target:
@@ -165,32 +171,24 @@ def train(args, model_G, model_D, optimizer_G, optimizer_D, dataloader_train, da
             output_t = output_t.detach()
             with amp.autocast():
                 D_out = model_D(F.softmax(output_t))  ## we feed the discriminator with the output of the model
-                loss_D = loss_func_D(D_out, Variable(
-                    torch.FloatTensor(D_out.data.size()).fill_(target_label)).cuda())  ## add the adversarial loss
+                loss_D = loss_func_D(D_out, Variable(torch.FloatTensor(D_out.data.size()).fill_(target_label)).cuda())  ## add the adversarial loss
             scaler.scale(loss_D).backward()
 
             tq.update(args.batch_size)
-            tq.set_postfix(loss_seg='%.6f' % loss_seg)
+            tq.set_postfix(loss_seg='%.6f' % loss_G)
             tq.set_postfix(loss_adv='%.6f' % loss_adv)
-            tq.set_postfix(loss_D='%.6f' % loss_adv_D)
+            tq.set_postfix(loss_D='%.6f' % loss_D)
 
-            optimizer_G.zero_grad()
-            optimizer_D.zero_grad()
-
-            scaler.step(optimizer_G)
-            scaler.step(optimizer_D)  # optimizer for discriminator
-
+            loss_G_record.append(loss_G.item())
+            loss_adv_record.append(loss_adv.item())
+            loss_D_record.append(loss_D.item())           
+            step += 1
+            writer.add_scalar('loss_G_step', loss_G, step)  ## track the segmentation loss 
+            writer.add_scalar('loss_adv_step', loss_adv, step)  ## track the adversarial loss 
+            writer.add_scalar('loss_D_step', loss_D, step)  ## track the discreminator loss 
+            scaler.step(optimizer_G)  # update the optimizer for genarator
+            scaler.step(optimizer_D)  # update the optimizer for discriminator
             scaler.update()
-            
-            
-        step += 1
-        writer.add_scalar('loss_G_step', loss_G, step)  ## track the segmentation loss 
-        writer.add_scalar('loss_adv_step', loss_adv, step)  ## track the adversarial loss 
-        writer.add_scalar('loss_D_step', loss_D, step)  ## track the adversarial loss 
-
-        loss_G_record.append(loss_G.item())
-        loss_adv_record.append(loss_adv.item())
-        loss_D_record.append(loss_D.item())
 
         tq.close()
         loss_G_train_mean = np.mean(loss_G_record)
@@ -204,36 +202,37 @@ def train(args, model_G, model_D, optimizer_G, optimizer_D, dataloader_train, da
         
         
         #the checkpoint needs rewriting
-        """"
-        loss_train_mean = np.mean(loss_record)
-        writer.add_scalar('epoch/loss_epoch_train', float(loss_train_mean), epoch)
-        print('loss for train : %f' % (loss_train_mean))
+        
         if epoch % args.checkpoint_step == 0 and epoch != 0:
             if not os.path.isdir(args.save_model_path):
                 os.mkdir(args.save_model_path)
             state = {
                 "epoch": epoch,
-                "model_state": model.module.state_dict(),
-                "optimizer": optimizer.state_dict()
+                "model_G_state": model_G.module.state_dict(),
+                "optimizer_G": optimizer_G.state_dict() ,
+                "model_D_state": model_D.module.state_dict(), 
+                "optimizer_D": optimizer_D.state_dict()
             }
+
             torch.save(state, os.path.join(args.save_model_path, 'latest_dice_loss.pth'))
+
             print("*** epoch " + str(epoch) + " saved as recent checkpoint!!!")
 
         if epoch % args.validation_step == 0 and epoch != 0:
-            precision, miou = val(args, model, dataloader_val)
+            precision, miou = val(args, model_G, CamVid_dataloader_val)
             if miou > max_miou:
                 max_miou = miou
                 os.makedirs(args.save_model_path, exist_ok=True)
                 state = {
                     "epoch": epoch,
-                    "model_state": model.module.state_dict(),
-                    "optimizer": optimizer.state_dict()
+                    "model_state": model_G.module.state_dict(),
+                    "optimizer": optimizer_G.state_dict()
                 }
                 torch.save(state, os.path.join(args.save_model_path, 'best_dice_loss.pth'))
                 print("*** epoch " + str(epoch) + " saved as best checkpoint!!!")
             writer.add_scalar('epoch/precision_val', precision, epoch)
             writer.add_scalar('epoch/miou val', miou, epoch)
-            """
+            
 
 def main(params):
     # basic parameters
@@ -257,8 +256,8 @@ def main(params):
     parser.add_argument('--use_gpu', type=bool, default=True, help='whether to user gpu for training')
     parser.add_argument('--pretrained_model_path', type=str, default=None, help='path to pretrained model')
     parser.add_argument('--save_model_path', type=str, default=None, help='path to save model')
-    parser.add_argument('--optimizer_G', type=str, default='rmsprop', help='optimizer, support rmsprop, sgd, adam')
-    parser.add_argument('--optimizer_D', type=str, default='rmsprop', help='optimizer, support rmsprop, sgd, adam')
+    parser.add_argument('--optimizer_G', type=str, default='rmsprop', help='optimizer_G, support rmsprop, sgd, adam')  
+    parser.add_argument('--optimizer_D', type=str, default='rmsprop', help='optimizer_G, support rmsprop, sgd, adam')
     parser.add_argument('--loss', type=str, default='dice', help='loss function, dice or crossentropy')
 
     args = parser.parse_args(params)
@@ -312,39 +311,49 @@ def main(params):
         model_G = torch.nn.DataParallel(model_G).cuda()
         
     #build model_D
-    os.environ['CUDA_VISIBLE_DEVICES'] = args.cuda
-    model_D = discriminaor(args.num_classes)
+    model_D = Discriminator(args.num_classes)
     if torch.cuda.is_available() and args.use_gpu:
         model_D = torch.nn.DataParallel(model_D).cuda()
 
-    # build optimizer
-    if args.optimizer == 'rmsprop':
+    # build optimizer G
+    if args.optimizer_G == 'rmsprop':
         optimizer_G = torch.optim.RMSprop(model_G.parameters(), args.learning_rate)
-        optimize_D = torch.optim.RMSprop(model_D.parameters(), args.learning_rate)
-    elif args.optimizer == 'sgd':
+    elif args.optimizer_G == 'sgd':
         optimizer_G = torch.optim.SGD(model_G.parameters(), args.learning_rate, momentum=0.9, weight_decay=1e-4)
-        optimizer_D = torch.optim.SGD(model_D.parameters(), args.learning_rate, momentum=0.9, weight_decay=1e-4)
-    elif args.optimizer == 'adam':
+    elif args.optimizer_G == 'adam':
         optimizer_G = torch.optim.Adam(model_G.parameters(), args.learning_rate)
-        ptimizer_D = torch.optim.Adam(model_D.parameters(), args.learning_rate)
+    else:  # rmsprop
+        print('not supported optimizer \n')
+        return None
+
+    # build optimizer D
+    if args.optimizer_D == 'rmsprop':
+        optimizer_D = torch.optim.RMSprop(model_D.parameters(), args.learning_rate)
+    elif args.optimizer_D == 'sgd':
+        optimizer_D = torch.optim.SGD(model_D.parameters(), args.learning_rate, momentum=0.9, weight_decay=1e-4)
+    elif args.optimizer_D == 'adam':
+        optimizer_D = torch.optim.Adam(model_D.parameters(), args.learning_rate)
     else:  # rmsprop
         print('not supported optimizer \n')
         return None
 
     curr_epoch = 0
+         
     # load pretrained model if exists
     if args.pretrained_model_path is not None:
-        print('load model from %s ...' % args.pretrained_model_path)
-        state = torch.load(os.path.realpath(args.pretrained_model_path))
-        model.module.load_state_dict(state['model_state'])
-        optimizer.load_state_dict(state['optimizer'])
+        print('load model from %s ...' % args.pretrained_model_path)   
+        state = torch.load(os.path.realpath(args.pretrained_model_path))  ## upload the pretrained  MODEL_G 
+        model_G.module.load_state_dict(state['model_G_state'])
+        optimizer_G.load_state_dict(state['optimizer_G'])
+        model_D.module.load_state_dict(state['model_D_state'])            ## upload the pretrained  MODEL_D 
+        optimizer_D.load_state_dict(state['optimizer_D'])
         curr_epoch = state["epoch"] + 1
         print(str(curr_epoch - 1) + " already trained")
         print("start training from epoch " + str(curr_epoch))
         print('Done!')
 
     # train
-    train(args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_train, CamVid_dataloader_val, IDDA_dataloader, curr_epoch)
+    train (args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_train, CamVid_dataloader_val, IDDA_dataloader, curr_epoch)
 
     # val(args, model, dataloader_val, csv_path)
 
