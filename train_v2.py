@@ -81,11 +81,8 @@ def train(args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_tr
     elif args.loss_G == 'crossentropy':
         loss_func_G = torch.nn.CrossEntropyLoss()
         
-    if args.loss_adv == 'BCEwithlogits':
-        loss_func_adv = torch.nn.BCEWithLogitsLoss()
-        
-    if args.loss_D == 'BCEwithlogits':
-        loss_func_D = torch.nn.BCEWithLogitsLoss()
+    loss_func_adv = torch.nn.BCEWithLogitsLoss()
+    loss_func_D = torch.nn.BCEWithLogitsLoss()
         
     max_miou = 0
     step = 0
@@ -259,6 +256,7 @@ def main(params):
     parser.add_argument('--optimizer_G', type=str, default='rmsprop', help='optimizer_G, support rmsprop, sgd, adam')  
     parser.add_argument('--optimizer_D', type=str, default='rmsprop', help='optimizer_D, support rmsprop, sgd, adam')
     parser.add_argument('--loss', type=str, default='dice', help='loss function, dice or crossentropy')
+    parser.add_argument('--loss_G', type=str, default='dice', help='loss function, dice or crossentropy')
 
     args = parser.parse_args(params)
 
@@ -291,11 +289,10 @@ def main(params):
     )
 
     # create dataset and dataloader for IDDA
-    IDDA_path = [os.path.join(args.data_IDDA, 'rgb')]
-    IDDA_label_path = [os.path.join(args.data_IDDA, 'labels')]
-    IDDA_csv_path = os.path.join(args.data_IDDA, 'classes_info.json')
-    IDDA_dataset = IDDA(IDDA_path, IDDA_label_path, IDDA_csv_path, scale=(args.crop_height, args.crop_width),
-                        loss=args.loss, mode='train')
+    IDDA_path = os.path.join(args.data_IDDA, 'rgb')
+    IDDA_label_path = os.path.join(args.data_IDDA, 'labels')
+    IDDA_info_path = os.path.join(args.data_IDDA, 'classes_info.json')
+    IDDA_dataset = IDDA(IDDA_path, IDDA_label_path, IDDA_info_path, CamVid_csv_path, scale=(args.crop_height, args.crop_width), loss=args.loss)
     IDDA_dataloader = DataLoader(
         IDDA_dataset,
         batch_size=args.batch_size,

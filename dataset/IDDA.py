@@ -2,10 +2,9 @@ import torch
 import os
 from torchvision import transforms
 import glob
-from utils import get_Idda_info, get_label_info, RandomCrop, one_hot_it_v11_dice, one_hot_it_v11
+from utils import get_Idda_info, get_label_info, RandomCrop, one_hot_it_v11_dice, one_hot_it_v11, augmentation, augmentation_pixel
 from PIL import Image
 import numpy as np
-from CamVid import augmentation, augmentation_pixel
 import random
 
 class IDDA(torch.utils.data.Dataset):

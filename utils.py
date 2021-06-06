@@ -8,6 +8,7 @@ import random
 import numbers
 import torchvision
 import json
+import imgaug.augmenters as iaa 
 
 def poly_lr_scheduler(optimizer, init_lr, iter, lr_decay_iter=1,
                       max_iter=300, power=0.9):
@@ -300,3 +301,19 @@ def get_Idda_info(info_path):
 	with open(info_path) as fp:
 		obj = json.load(fp)
 	return obj
+
+def augmentation(image, label):
+
+    HorizontalFlip = iaa.Fliplr(0.5)
+    
+    image = HorizontalFlip.augment_image(image)
+    label = HorizontalFlip.augment_image(label)
+    # augment images with spatial transformation: Flip, Affine, Rotation, etc...
+    return image, label
+
+def augmentation_pixel(image):
+    # augment images with pixel intensity transformation: GaussianBlur, Multiply, etc...
+    #Gaussian blur
+    blur = iaa.GaussianBlur(sigma=(1,2))
+    image = blur.augment_image(image)
+    return image

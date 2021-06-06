@@ -6,26 +6,9 @@ import cv2
 from PIL import Image
 import pandas as pd
 import numpy as np
-from utils import get_label_info, one_hot_it, RandomCrop, reverse_one_hot, one_hot_it_v11, one_hot_it_v11_dice
+from utils import get_label_info, one_hot_it, RandomCrop, reverse_one_hot, one_hot_it_v11, one_hot_it_v11_dice, augmentation, augmentation_pixel
 import random
 import imgaug.augmenters as iaa
-
-def augmentation(image, label):
-
-    HorizontalFlip = iaa.Fliplr(0.5)
-    
-    image = HorizontalFlip.augment_image(image)
-    label = HorizontalFlip.augment_image(label)
-    # augment images with spatial transformation: Flip, Affine, Rotation, etc...
-    return image, label
-
-def augmentation_pixel(image):
-    # augment images with pixel intensity transformation: GaussianBlur, Multiply, etc...
-    #Gaussian blur
-    blur = iaa.GaussianBlur(sigma=(1,2))
-    image = blur.augment_image(image)
-    return image
-
 
 class CamVid(torch.utils.data.Dataset):
     def __init__(self, image_path, label_path, csv_path, scale, loss='dice', mode='train'):
