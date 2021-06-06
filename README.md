@@ -14,6 +14,11 @@ Download CamVid dataset from [Google Drive](https://drive.google.com/file/d/1CKt
 python train.py
 ```  
 
+## Adversarial Train
+```
+python train_v2.py
+```  
+
 ## Test
 ```
 python test.py
