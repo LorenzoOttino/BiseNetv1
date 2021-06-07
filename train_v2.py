@@ -26,6 +26,15 @@ import torch.cuda.amp as amp
 
 # torch.cuda.empty_cache()
 
+def lr_poly(base_lr, iter, max_iter, power=0.9):
+    return base_lr * ((1 - float(iter) / max_iter) ** (power))
+
+def adjust_learning_rate_D(optimizer, i_iter, args):
+    lr = lr_poly(1e-4, i_iter, args.num_epochs)
+    optimizer.param_groups[0]['lr'] = lr
+    if len(optimizer.param_groups) > 1:
+        optimizer.param_groups[1]['lr'] = lr * 10
+
 def val(args, model_G,dataloader ):
     print('start val!')
     # label_info = get_label_info(csv_path)
@@ -114,6 +123,7 @@ def train(args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_tr
 
             optimizer_G.zero_grad()
             optimizer_D.zero_grad()
+            adjust_learning_rate_D(optimizer_D, i, args)
 
 
         #train G:
