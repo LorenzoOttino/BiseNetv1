@@ -27,10 +27,11 @@ import torch.cuda.amp as amp
 # torch.cuda.empty_cache()
 
 def lr_poly(base_lr, iter, max_iter, power=0.9):
-    return base_lr * ((1 - float(iter) / max_iter) ** (power))
+    return base_lr * ((1 - np.float32(iter) / max_iter) ** (power))
 
-def adjust_learning_rate_D(optimizer, i_iter, args):
-    lr = lr_poly(1e-4, i_iter, args.num_epochs)
+def adjust_learning_rate_D(optimizer, i_iter, max_iter):
+    lr = lr_poly(1e-4, i_iter, max_iter)
+
     optimizer.param_groups[0]['lr'] = lr
     if len(optimizer.param_groups) > 1:
         optimizer.param_groups[1]['lr'] = lr * 10
@@ -123,7 +124,7 @@ def train(args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_tr
 
             optimizer_G.zero_grad()
             optimizer_D.zero_grad()
-            adjust_learning_rate_D(optimizer_D, i, args)
+            adjust_learning_rate_D(optimizer_D, i, t_size)
 
 
         #train G:
@@ -383,7 +384,7 @@ if __name__ == '__main__':
         '--save_model_path', './checkpoints_adversarial',  # modify this to your path
         '--context_path', 'resnet101',  # set resnet18 or resnet101, only support resnet18 and resnet101
         '--optimizer_G', 'sgd',
-        '--optimizer_D', 'sgd',
+        '--optimizer_D', 'adam',
         # '--pretrained_model_path', './checkpoints_adversarial/latest_dice_loss.pth',   # modify this to your path
         '--checkpoint_step', '5'
 
