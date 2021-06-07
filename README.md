@@ -4,7 +4,7 @@ Starting code for the student belonging to the project "Real-time domain adaptat
 BiSeNet based on pytorch 0.4.1 and python 3.6
 
 ## Group 1 Fork
-Currently working at point 2
+Currently working at point 3
 
 ## Dataset  
 Download CamVid dataset from [Google Drive](https://drive.google.com/file/d/1CKtkLRVU4tGbqLSyFEtJMoZV2ZZ2KDeA/view?usp=sharing) 
@@ -12,6 +12,11 @@ Download CamVid dataset from [Google Drive](https://drive.google.com/file/d/1CKt
 ## Train
 ```
 python train.py
+```  
+
+## Adversarial Train
+```
+python train_v2.py
 ```  
 
 ## Test
