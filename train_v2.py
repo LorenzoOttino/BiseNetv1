@@ -103,7 +103,7 @@ def train(args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_tr
         lr_D = poly_lr_scheduler(optimizer_D, args.learning_rate, iter=epoch, max_iter=args.num_epochs)
         model_G.train()
         model_D.train()
-        tq = tqdm(total=len(IDDA_dataloader) * args.batch_size)
+        tq = tqdm(total=len(CamVid_dataloader_train) * args.batch_size)
         tq.set_description('epoch %d, lr_G %f , lr_D %f' % (epoch, lr_G ,lr_D )) 
 
         # set the ground truth for the discriminator
@@ -119,7 +119,7 @@ def train(args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_tr
         target_loader = enumerate(CamVid_dataloader_train)
         t_size = len(CamVid_dataloader_train)
 
-        for i in range(s_size):
+        for i in range(t_size):
 
             optimizer_G.zero_grad()
             optimizer_D.zero_grad()
@@ -151,11 +151,11 @@ def train(args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_tr
 
             #train with target:
 
-            try:
-                _, batch = next(target_loader)
-            except:
-                target_loader = enumerate(CamVid_dataloader_train)
-                _, batch = next(target_loader)
+            #try:
+            _, batch = next(target_loader)
+            #except:
+            #    target_loader = enumerate(CamVid_dataloader_train)
+            #    _, batch = next(target_loader)
 
             data, _ = batch
             data = data.cuda()
