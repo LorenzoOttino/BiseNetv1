@@ -178,9 +178,8 @@ def train(args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_tr
             scaler.scale(loss_D).backward()
 
             tq.update(args.batch_size)
-            tq.set_postfix(loss_seg='%.6f' % loss_G)
-            #tq.set_postfix(loss_adv='%.6f' % loss_adv)
-            #tq.set_postfix(loss_D='%.6f' % loss_D)
+            losses = {"loss_seg" : '%.6f' %(loss_G.item())  , "loss_adv" : '%.6f' %(loss_adv.item()) , "loss_D" : '%.6f'%(loss_D.item()) } # add dictionary to print losses
+            tq.set_postfix(losses)
 
             loss_G_record.append(loss_G.item())
             loss_adv_record.append(loss_adv.item())
