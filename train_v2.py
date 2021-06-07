@@ -373,7 +373,7 @@ if __name__ == '__main__':
         '--save_model_path', './checkpoints_adversarial',  # modify this to your path
         '--context_path', 'resnet101',  # set resnet18 or resnet101, only support resnet18 and resnet101
         '--optimizer_G', 'sgd',
-        '--optimizer_D', 'adam',
+        '--optimizer_D', 'sgd',
         # '--pretrained_model_path', './checkpoints_adversarial/latest_dice_loss.pth',   # modify this to your path
         '--checkpoint_step', '5'
 
