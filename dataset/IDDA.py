@@ -26,7 +26,7 @@ class IDDA(torch.utils.data.Dataset):
         self.scale = [0.5, 1, 1.25, 1.5, 1.75, 2]
         #loading dictionary for labels translation
         self.toCamVidDict = { 0: [  0, 128, 192], 1:[128,   0,   0], 2:[ 64,   0, 128], 3:[192, 192, 128], 4:[ 64,  64, 128],
-        5:[ 64,  64,   0], 6:[128,  64, 128], 7:[  0,   0, 192], 8:[192, 128, 128], 9:[128, 128, 128], 10:[128, 128,   0], 255:[255, 255, 255]}
+        5:[ 64,  64,   0], 6:[128,  64, 128], 7:[  0,   0, 192], 8:[192, 128, 128], 9:[128, 128, 128], 10:[128, 128,   0], 255:[0, 0, 0]}
         self.label_info = get_label_info(csv_path)
         #creating lists of images and labels
         self.images.extend(glob.glob(os.path.join(images_path, '*.jpg')))
@@ -90,7 +90,7 @@ class IDDA(torch.utils.data.Dataset):
         return len(self.images)
 
     def __toCamVid(self, label_IDDA):
-        label_CamVid = np.ones(label_IDDA.shape, dtype=np.uint8) * 255
+        label_CamVid = np.zeros(label_IDDA.shape, dtype=np.uint8)
 
         for i in range(len(self.dataset_info['label2camvid'])):
             mask = label_IDDA[:,:,0] == self.dataset_info['label2camvid'][i][0]
