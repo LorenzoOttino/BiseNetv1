@@ -153,7 +153,7 @@ def train(args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_tr
 
                 output_t, output_sup1, output_sup2 = model_G(data)
                 D_out = model_D(F.softmax(output_t))
-                loss_adv = loss_func_adv(D_out , Variable(torch.FloatTensor(D_out.data.size()).fill_(source_label)).cuda() )  # I MIDIFIED THOSE TRY TO FOOL THE DISC
+                loss_adv = loss_func_adv(D_out , Variable(torch.HalfTensor(D_out.data.size()).fill_(source_label)).cuda() )  # I MIDIFIED THOSE TRY TO FOOL THE DISC
 
             scaler.scale(loss_adv).backward()
 
@@ -166,7 +166,7 @@ def train(args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_tr
             output_s = output_s.detach()
             with amp.autocast():
                 D_out = model_D(F.softmax(output_s))  # we feed the discriminator with the output of the model
-                loss_D = loss_func_D(D_out, Variable(torch.FloatTensor(D_out.data.size()).fill_(source_label)).cuda())   # add the adversarial loss
+                loss_D = loss_func_D(D_out, Variable(torch.HalfTensor(D_out.data.size()).fill_(source_label)).cuda())   # add the adversarial loss
             scaler.scale(loss_D).backward()
 
             #train with target:
@@ -174,7 +174,7 @@ def train(args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_tr
             output_t = output_t.detach()
             with amp.autocast():
                 D_out = model_D(F.softmax(output_t))  # we feed the discriminator with the output of the model
-                loss_D = loss_func_D(D_out, Variable(torch.FloatTensor(D_out.data.size()).fill_(target_label)).cuda())  # add the adversarial loss
+                loss_D = loss_func_D(D_out, Variable(torch.HalfTensor(D_out.data.size()).fill_(target_label)).cuda())  # add the adversarial loss
             scaler.scale(loss_D).backward()
 
             tq.update(args.batch_size)
