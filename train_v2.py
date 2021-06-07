@@ -94,23 +94,23 @@ def train(args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_tr
         tq = tqdm.tqdm(total=len(IDDA_dataloader) * args.batch_size) 
         tq.set_description('epoch %d, lr_G %f , lr_D %f' % (epoch, lr_G ,lr_D )) 
 
-        ## set the ground truth for the discriminator
+        # set the ground truth for the discriminator
         source_label = 0
         target_label = 1
         # iniate lists to track the losses 
         loss_G_record = []
-        loss_adv_record = []  ## we added a new list to track the advarsirial loss of generator
-        loss_D_record = []     ## we added a new list to track the discriminator loss 
+        loss_adv_record = []  # we added a new list to track the advarsirial loss of generator
+        loss_D_record = []     # we added a new list to track the discriminator loss 
         
         source_train_loader = enumerate(IDDA_dataloader)
-        s_size = len(list(source_train_loader))
+        s_size = len(IDDA_dataloader)
         target_loader = enumerate(CamVid_dataloader_train)
-        t_size = len(list(CamVid_dataloader_train))
+        t_size = len(CamVid_dataloader_train)
 
         for i in range(s_size):  
             if(i % t_size == 0):
                 target_loader = enumerate(CamVid_dataloader_train)
-        
+
             optimizer_G.zero_grad()
             optimizer_D.zero_grad()
 
@@ -122,7 +122,7 @@ def train(args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_tr
 
             #train with source:
 
-            _, batch = source_train_loader.next()
+            _, batch = next(source_train_loader)
             data, label = batch
 
             with amp.autocast():
@@ -139,7 +139,7 @@ def train(args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_tr
 
             #train with target:
 
-            _, batch = target_loader.next()
+            _, batch = next(target_loader)
             data, _ = batch  
 
             with amp.autocast():
@@ -159,7 +159,7 @@ def train(args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_tr
 
             output_s = output_s.detach()
             with amp.autocast():
-                D_out = model_D(F.softmax(output_s))  ## we feed the discriminator with the output of the model
+                D_out = model_D(F.softmax(output_s))  # we feed the discriminator with the output of the model
                 loss_D = loss_func_D(D_out, Variable(torch.FloatTensor(D_out.data.size()).fill_(source_label)).cuda())   # add the adversarial loss
             scaler.scale(loss_D).backward()
 
@@ -167,8 +167,8 @@ def train(args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_tr
 
             output_t = output_t.detach()
             with amp.autocast():
-                D_out = model_D(F.softmax(output_t))  ## we feed the discriminator with the output of the model
-                loss_D = loss_func_D(D_out, Variable(torch.FloatTensor(D_out.data.size()).fill_(target_label)).cuda())  ## add the adversarial loss
+                D_out = model_D(F.softmax(output_t))  # we feed the discriminator with the output of the model
+                loss_D = loss_func_D(D_out, Variable(torch.FloatTensor(D_out.data.size()).fill_(target_label)).cuda())  # add the adversarial loss
             scaler.scale(loss_D).backward()
 
             tq.update(args.batch_size)
@@ -180,9 +180,9 @@ def train(args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_tr
             loss_adv_record.append(loss_adv.item())
             loss_D_record.append(loss_D.item())           
             step += 1
-            writer.add_scalar('loss_G_step', loss_G, step)  ## track the segmentation loss 
-            writer.add_scalar('loss_adv_step', loss_adv, step)  ## track the adversarial loss 
-            writer.add_scalar('loss_D_step', loss_D, step)  ## track the discreminator loss 
+            writer.add_scalar('loss_G_step', loss_G, step)  # track the segmentation loss 
+            writer.add_scalar('loss_adv_step', loss_adv, step)  # track the adversarial loss 
+            writer.add_scalar('loss_D_step', loss_D, step)  # track the discreminator loss 
             scaler.step(optimizer_G)  # update the optimizer for genarator
             scaler.step(optimizer_D)  # update the optimizer for discriminator
             scaler.update()
@@ -339,10 +339,10 @@ def main(params):
     # load pretrained model if exists
     if args.pretrained_model_path is not None:
         print('load model from %s ...' % args.pretrained_model_path)   
-        state = torch.load(os.path.realpath(args.pretrained_model_path))  ## upload the pretrained  MODEL_G 
+        state = torch.load(os.path.realpath(args.pretrained_model_path))  # upload the pretrained  MODEL_G 
         model_G.module.load_state_dict(state['model_G_state'])
         optimizer_G.load_state_dict(state['optimizer_G'])
-        model_D.module.load_state_dict(state['model_D_state'])            ## upload the pretrained  MODEL_D 
+        model_D.module.load_state_dict(state['model_D_state'])            # upload the pretrained  MODEL_D 
         optimizer_D.load_state_dict(state['optimizer_D'])
         curr_epoch = state["epoch"] + 1
         print(str(curr_epoch - 1) + " already trained")
@@ -361,10 +361,10 @@ if __name__ == '__main__':
         '--learning_rate', '2.5e-2',
         '--data_CamVid', './CamVid',
         '--data_IDDA', './IDDA',
-        '--num_workers', '8',
+        '--num_workers', '0',
         '--num_classes', '12',
         '--cuda', '0',
-        '--batch_size', '8',
+        '--batch_size', '4',
         '--save_model_path', './checkpoints_adversarial',  # modify this to your path
         '--context_path', 'resnet101',  # set resnet18 or resnet101, only support resnet18 and resnet101
         '--optimizer_G', 'sgd',
@@ -374,4 +374,5 @@ if __name__ == '__main__':
 
     ]
     main(params)
+
 
