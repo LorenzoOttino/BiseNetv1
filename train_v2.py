@@ -10,16 +10,16 @@ from model.build_BiSeNet import BiSeNet
 from model.discriminator import Discriminator 
 import torch
 from tensorboardX import SummaryWriter
-import tqdm
+from tqdm import tqdm
 import numpy as np
 from utils import poly_lr_scheduler
 from utils import reverse_one_hot, compute_global_accuracy, fast_hist, \
     per_class_iu
 from loss import DiceLoss
 
-from torch.cuda import amp
+import torch.cuda.amp as amp
 
-scaler = amp.GradScaler()
+
 
 
 # clear the cache to train ResnNet 101 
@@ -34,9 +34,9 @@ def val(args, model_G,dataloader ):
         precision_record = []
         hist = np.zeros((args.num_classes, args.num_classes))
         for i, (data, label) in enumerate(dataloader):
-            if torch.cuda.is_available() and args.use_gpu:
-                data = data.cuda()
-                label = label.cuda()
+            label = label.type(torch.LongTensor)
+            data = data.cuda()
+            label = label.long().cuda()
 
             # get RGB predict image
             predict = model_G(data).squeeze()
@@ -76,6 +76,9 @@ def val(args, model_G,dataloader ):
 def train(args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_train, CamVid_dataloader_val, IDDA_dataloader, curr_epoch): 
 # we need the camvid data loader an modify the dataloadrer val we don't need the data loader train because we use Idda dataloader 
     writer = SummaryWriter(comment=''.format(args.optimizer_G,args.optimizer_D, args.context_path))#not important for now
+
+
+    scaler = amp.GradScaler()
     if args.loss_G == 'dice':
         loss_func_G = DiceLoss()
     elif args.loss_G == 'crossentropy':
@@ -91,7 +94,7 @@ def train(args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_tr
         lr_D = poly_lr_scheduler(optimizer_D, args.learning_rate, iter=epoch, max_iter=args.num_epochs)
         model_G.train()
         model_D.train()
-        tq = tqdm.tqdm(total=len(IDDA_dataloader) * args.batch_size) 
+        tq = tqdm(total=len(IDDA_dataloader) * args.batch_size)
         tq.set_description('epoch %d, lr_G %f , lr_D %f' % (epoch, lr_G ,lr_D )) 
 
         # set the ground truth for the discriminator
@@ -107,9 +110,7 @@ def train(args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_tr
         target_loader = enumerate(CamVid_dataloader_train)
         t_size = len(CamVid_dataloader_train)
 
-        for i in range(s_size):  
-            if(i % t_size == 0):
-                target_loader = enumerate(CamVid_dataloader_train)
+        for i in range(s_size):
 
             optimizer_G.zero_grad()
             optimizer_D.zero_grad()
@@ -124,11 +125,12 @@ def train(args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_tr
 
             _, batch = next(source_train_loader)
             data, label = batch
+            label = label.type(torch.LongTensor)
+            data = data.cuda()
+            label = label.long().cuda()
 
             with amp.autocast():
-                if torch.cuda.is_available() and args.use_gpu:
-                    data = data.cuda()
-                    label = label.cuda()
+
                 output_s, output_sup1, output_sup2 = model_G(data)
                 loss1 = loss_func_G(output_s, label)
                 loss2 = loss_func_G(output_sup1, label)
@@ -139,12 +141,16 @@ def train(args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_tr
 
             #train with target:
 
-            _, batch = next(target_loader)
-            data, _ = batch  
+            try:
+                _, batch = next(target_loader)
+            except:
+                target_loader = enumerate(CamVid_dataloader_train)
+                _, batch = next(target_loader)
 
+            data, _ = batch
+            data = data.cuda()
             with amp.autocast():
-                if torch.cuda.is_available() and args.use_gpu:
-                    data = data.cuda()
+
                 output_t, output_sup1, output_sup2 = model_G(data)
                 D_out = model_D(F.softmax(output_t))
                 loss_adv = loss_func_adv(D_out , Variable(torch.FloatTensor(D_out.data.size()).fill_(source_label)).cuda() )  # I MIDIFIED THOSE TRY TO FOOL THE DISC
@@ -173,8 +179,8 @@ def train(args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_tr
 
             tq.update(args.batch_size)
             tq.set_postfix(loss_seg='%.6f' % loss_G)
-            tq.set_postfix(loss_adv='%.6f' % loss_adv)
-            tq.set_postfix(loss_D='%.6f' % loss_D)
+            #tq.set_postfix(loss_adv='%.6f' % loss_adv)
+            #tq.set_postfix(loss_D='%.6f' % loss_D)
 
             loss_G_record.append(loss_G.item())
             loss_adv_record.append(loss_adv.item())
@@ -241,7 +247,7 @@ def main(params):
     parser.add_argument('--dataset', type=str, default="CamVid", help='Dataset you are using.')
     parser.add_argument('--crop_height', type=int, default=720, help='Height of cropped/resized input image to network')
     parser.add_argument('--crop_width', type=int, default=960, help='Width of cropped/resized input image to network')
-    parser.add_argument('--batch_size', type=int, default=1, help='Number of images in each batch')
+    parser.add_argument('--batch_size', type=int, default=32, help='Number of images in each batch')
     parser.add_argument('--context_path', type=str, default="resnet101",
                         help='The context path model you are using, resnet18, resnet101.')
     parser.add_argument('--learning_rate', type=float, default=0.01, help='learning rate used for train')
@@ -361,7 +367,7 @@ if __name__ == '__main__':
         '--learning_rate', '2.5e-2',
         '--data_CamVid', './CamVid',
         '--data_IDDA', './IDDA',
-        '--num_workers', '0',
+        '--num_workers', '8',
         '--num_classes', '12',
         '--cuda', '0',
         '--batch_size', '4',
