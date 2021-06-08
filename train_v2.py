@@ -392,7 +392,7 @@ if __name__ == '__main__':
         '--optimizer_G', 'sgd',
         '--optimizer_D', 'adam',
         # '--pretrained_model_path', './checkpoints_adversarial/latest_dice_loss.pth',   # modify this to your path
-        '--checkpoint_step', '5'
+        '--checkpoint_step', '5',
         '--lambda_adv', '0.001'
 
     ]
