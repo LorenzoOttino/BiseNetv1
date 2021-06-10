@@ -21,21 +21,6 @@ import torch.cuda.amp as amp
 
 
 
-
-# clear the cache to train ResnNet 101 
-
-# torch.cuda.empty_cache()
-
-def lr_poly(base_lr, iter, max_iter, power=0.9):
-    return base_lr * ((1 - np.float32(iter) / max_iter) ** (power))
-
-def adjust_learning_rate_D(optimizer, i_iter, max_iter):
-    lr = lr_poly(1e-4, i_iter, max_iter)
-
-    optimizer.param_groups[0]['lr'] = lr
-    if len(optimizer.param_groups) > 1:
-        optimizer.param_groups[1]['lr'] = lr * 10
-
 def val(args, model_G,dataloader ):
     print('start val!')
     # label_info = get_label_info(csv_path)
@@ -224,7 +209,8 @@ def train(args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_tr
                 "model_G_state": model_G.module.state_dict(),
                 "optimizer_G": optimizer_G.state_dict() ,
                 "model_D_state": model_D.module.state_dict(), 
-                "optimizer_D": optimizer_D.state_dict()
+                "optimizer_D": optimizer_D.state_dict(),
+                "max_miou": max_miou
             }
 
             torch.save(state, os.path.join(args.save_model_path, 'latest_dice_loss.pth'))
@@ -364,7 +350,7 @@ def main(params):
         optimizer_G.load_state_dict(state['optimizer_G'])
         model_D.module.load_state_dict(state['model_D_state'])            # upload the pretrained  MODEL_D 
         optimizer_D.load_state_dict(state['optimizer_D'])
-        curr_epoch = state["epoch"] + 1
+        curr_epoch = state["epoch"]
         max_miou = state["max_miou"]
         print(str(curr_epoch - 1) + " already trained")
         print("start training from epoch " + str(curr_epoch))
@@ -391,8 +377,8 @@ if __name__ == '__main__':
         '--context_path', 'resnet101',  # set resnet18 or resnet101, only support resnet18 and resnet101
         '--optimizer_G', 'sgd',
         '--optimizer_D', 'adam',
-        # '--pretrained_model_path', './checkpoints_adversarial/latest_dice_loss.pth',   # modify this to your path
-        '--checkpoint_step', '5',
+         '--pretrained_model_path', './checkpoints_adversarial/latest_dice_loss.pth',   # modify this to your path
+        '--checkpoint_step', '2',
         '--lambda_adv', '0.001'
 
     ]
