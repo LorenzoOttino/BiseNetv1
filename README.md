@@ -7,7 +7,9 @@ BiSeNet based on pytorch 0.4.1 and python 3.6
 Currently working at point 3
 
 ## Dataset  
-Download CamVid dataset from [Google Drive](https://drive.google.com/file/d/1CKtkLRVU4tGbqLSyFEtJMoZV2ZZ2KDeA/view?usp=sharing) 
+Download CamVid dataset from [Google Drive](https://drive.google.com/file/d/1CKtkLRVU4tGbqLSyFEtJMoZV2ZZ2KDeA/view?usp=sharing) <br>
+Download IDDA dataset from [Google Drive](https://drive.google.com/file/d/1GiUjXp1YBvnJjAf1un07hdHFUrchARa0/view) <br>
+Note: classes_info.json file needs to be modified by changing the first couple of brakets '[]' to {} and deleting the last comma.
   
 ## Train
 ```
