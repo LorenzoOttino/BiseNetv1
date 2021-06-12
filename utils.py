@@ -317,3 +317,13 @@ def augmentation_pixel(image):
     blur = iaa.GaussianBlur(sigma=(1,2))
     image = blur.augment_image(image)
     return image
+def colorize_label(label):
+    d = {0:[  0, 128, 192], 1:[128,   0,   0], 2:[ 64,   0, 128], 3:[192, 192, 128],
+          4:[ 64,  64, 128], 5:[ 64,  64,   0], 6:[128,  64, 128], 7:[  0,   0, 192],
+          8:[192, 128, 128], 9:[128, 128, 128], 10:[128, 128,   0], 11:[  0,   0,   0]}
+    label_copy = np.ones((label.shape[0], label.shape[1], 3), dtype=np.uint8)
+    for i in range(len(d)):
+        mask = label == i #label color
+        label_copy[mask] = d[i] #rgb color
+
+    return label_copy

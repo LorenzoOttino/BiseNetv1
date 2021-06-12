@@ -5,9 +5,10 @@ import os
 from torch.utils.data import DataLoader
 from model.build_BiSeNet import BiSeNet
 import numpy as np
-from utils import reverse_one_hot, compute_global_accuracy, fast_hist, per_class_iu, cal_miou
+from utils import reverse_one_hot, compute_global_accuracy, fast_hist, per_class_iu, cal_miou, colorize_label
 import tqdm
-
+from torchvision import transforms
+from PIL import Image
 
 def eval(model,dataloader, args, csv_path):
     print('start test!')
@@ -24,14 +25,22 @@ def eval(model,dataloader, args, csv_path):
                 label = label.cuda()
             predict = model(data).squeeze()
             predict = reverse_one_hot(predict)
-            predict = np.array(predict)
+            predict = np.array(predict.cpu())
             # predict = colour_code_segmentation(np.array(predict), label_info)
 
             label = label.squeeze()
             if args.loss == 'dice':
                 label = reverse_one_hot(label)
-            label = np.array(label)
+            label = np.array(label.cpu())
             # label = colour_code_segmentation(np.array(label), label_info)
+            #saving some images
+            if args.save_images_path is not None and i < 40:
+                current_image = transforms.functional.to_pil_image(data[0].cpu())
+                current_label = Image.fromarray(colorize_label(label))
+                current_predi = Image.fromarray(colorize_label(predict))
+                current_image.save(args.save_images_path + f"/image{i}.jpg")
+                current_label.save(args.save_images_path + f"/label{i}.jpeg")
+                current_predi.save(args.save_images_path + f"/prediction{i}.jpeg")
 
             precision = compute_global_accuracy(predict, label)
             hist += fast_hist(label.flatten(), predict.flatten(), args.num_classes)
@@ -60,6 +69,7 @@ def main(params):
     parser.add_argument('--use_gpu', type=bool, default=True, help='Whether to user gpu for training')
     parser.add_argument('--num_classes', type=int, default=32, help='num of object classes (with void)')
     parser.add_argument('--loss', type=str, default='dice', help='loss function, dice or crossentropy')
+    parser.add_argument('--save_images_path', type=str, default=None, help='specify path if you want to save some images')
     args = parser.parse_args(params)
 
     # create dataset and dataloader
@@ -72,7 +82,7 @@ def main(params):
     dataloader = DataLoader(
         dataset,
         batch_size=1,
-        shuffle=True,
+        shuffle=False,
         num_workers=4,
     )
 
@@ -84,7 +94,9 @@ def main(params):
 
     # load pretrained model if exists
     print('load model from %s ...' % args.checkpoint_path)
-    model.module.load_state_dict(torch.load(args.checkpoint_path))
+    #model.module.load_state_dict(torch.load(args.checkpoint_path))
+    state = torch.load(os.path.realpath(args.checkpoint_path))
+    model.module.load_state_dict(state['model_state'])
     print('Done!')
 
     # get label info
@@ -95,10 +107,12 @@ def main(params):
 
 if __name__ == '__main__':
     params = [
-        '--checkpoint_path', 'path/to/ckpt',
-        '--data', '/path/to/CamVid',
+        '--checkpoint_path', './checkpoints_adversarial/best_dice_loss.pth',
+        '--data', './CamVid',
         '--cuda', '0',
-        '--context_path', 'resnet18',
-        '--num_classes', '12'
+        '--context_path', 'resnet101',
+        '--num_classes', '12',
+        '--save_images_path', './val_images/discriminator',
+        '--loss', 'dice'
     ]
     main(params)
