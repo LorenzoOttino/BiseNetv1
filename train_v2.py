@@ -123,7 +123,6 @@ def train(args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_tr
             label = label.long().cuda()
 
             with amp.autocast():
-
                 output_s, output_sup1, output_sup2 = model_G(data)
                 loss1 = loss_func_G(output_s, label)
                 loss2 = loss_func_G(output_sup1, label)
@@ -240,7 +239,7 @@ def main(params):
     parser.add_argument('--num_epochs', type=int, default=300, help='Number of epochs to train for')
     parser.add_argument('--epoch_start_i', type=int, default=0, help='Start counting epochs from this number')
     parser.add_argument('--checkpoint_step', type=int, default=10, help='How often to save checkpoints (epochs)')
-    parser.add_argument('--validation_step', type=int, default=10, help='How often to perform validation (epochs)')
+    parser.add_argument('--validation_step', type=int, default=2, help='How often to perform validation (epochs)')
     parser.add_argument('--dataset', type=str, default="CamVid", help='Dataset you are using.')
     parser.add_argument('--crop_height', type=int, default=720, help='Height of cropped/resized input image to network')
     parser.add_argument('--crop_width', type=int, default=960, help='Width of cropped/resized input image to network')
@@ -377,7 +376,7 @@ if __name__ == '__main__':
         '--context_path', 'resnet101',  # set resnet18 or resnet101, only support resnet18 and resnet101
         '--optimizer_G', 'sgd',
         '--optimizer_D', 'adam',
-         '--pretrained_model_path', './checkpoints_adversarial/latest_dice_loss.pth',   # modify this to your path
+         #'--pretrained_model_path', './checkpoints_adversarial/latest_dice_loss.pth',   # modify this to your path
         '--checkpoint_step', '2',
         '--lambda_adv', '0.001'
 
