@@ -8,6 +8,7 @@ from dataset.IDDA import IDDA
 import os
 from model.build_BiSeNet import BiSeNet
 from model.discriminator import Discriminator 
+from model.depthWise_Separable_discriminator import DW_Discriminator , depthwise_separable_conv 
 import torch
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
@@ -312,7 +313,7 @@ def main(params):
         model_G = torch.nn.DataParallel(model_G).cuda()
         
     #build model_D
-    model_D = Discriminator(args.num_classes)
+    model_D = DW_Discriminator(args.num_classes)
     if torch.cuda.is_available() and args.use_gpu:
         model_D = torch.nn.DataParallel(model_D).cuda()
 
@@ -372,12 +373,13 @@ if __name__ == '__main__':
         '--num_classes', '12',
         '--cuda', '0',
         '--batch_size', '4',
-        '--save_model_path', './checkpoints_adversarial',  # modify this to your path
+        '--save_model_path', './checkpoints_adversarial_DepthWise',  # modify this to your path
         '--context_path', 'resnet101',  # set resnet18 or resnet101, only support resnet18 and resnet101
         '--optimizer_G', 'sgd',
         '--optimizer_D', 'adam',
-         #'--pretrained_model_path', './checkpoints_adversarial/latest_dice_loss.pth',   # modify this to your path
+         #'--pretrained_model_path', './checkpoints_adversarial_DepthWise/latest_dice_loss.pth',   # modify this to your path
         '--checkpoint_step', '2',
+        '--validation_step' , '2',
         '--lambda_adv', '0.001'
 
     ]
