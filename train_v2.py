@@ -352,7 +352,7 @@ def main(params):
         optimizer_D.load_state_dict(state['optimizer_D'])
         curr_epoch = state["epoch"]
         max_miou = state["max_miou"]
-        print(str(curr_epoch - 1) + " already trained")
+        print(str(curr_epoch) + " already trained")
         print("start training from epoch " + str(curr_epoch))
         print('Done!')
 
