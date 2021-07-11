@@ -7,7 +7,8 @@ from dataset.CamVid import CamVid
 from dataset.IDDA import IDDA
 import os
 from model.build_BiSeNet import BiSeNet
-from model.discriminator import Discriminator 
+from model.discriminator_dropout import Discriminator as Discriminator_Dropout
+from model.discriminator_fullyConv import Discriminator 
 from model.depthWise_Separable_discriminator import DW_Discriminator , depthwise_separable_conv 
 import torch
 from tensorboardX import SummaryWriter
@@ -262,6 +263,7 @@ def main(params):
     parser.add_argument('--loss', type=str, default='dice', help='loss function, dice or crossentropy')
     parser.add_argument('--loss_G', type=str, default='dice', help='loss function, dice or crossentropy')
     parser.add_argument('--lambda_adv', type=float, default=0.01, help='lambda coefficient for adversarial loss')
+    parser.add_argument('--discrim', type=str, default='DW', help='Discriminator to use - options: "DW", "DR" or "FC" ')
 
     args = parser.parse_args(params)
 
@@ -313,7 +315,16 @@ def main(params):
         model_G = torch.nn.DataParallel(model_G).cuda()
         
     #build model_D
-    model_D = DW_Discriminator(args.num_classes)
+    if args.discrim == 'DW':
+        model_D = DW_Discriminator(args.num_classes)
+    elif args.discrim == 'DR':
+        model_D = Discriminator_Dropout(args.num_classes)
+    else:
+        if args.discrim != 'FC':
+            print("Warning: --discrim bad argument")
+        model_D = Discriminator(args.num_classes)
+
+
     if torch.cuda.is_available() and args.use_gpu:
         model_D = torch.nn.DataParallel(model_D).cuda()
 
@@ -380,7 +391,8 @@ if __name__ == '__main__':
          #'--pretrained_model_path', './checkpoints_adversarial_DepthWise/latest_dice_loss.pth',   # modify this to your path
         '--checkpoint_step', '2',
         '--validation_step' , '2',
-        '--lambda_adv', '0.001'
+        '--lambda_adv', '0.001',
+        '--discrim', 'DW'
 
     ]
     main(params)
