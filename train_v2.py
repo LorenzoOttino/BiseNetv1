@@ -148,7 +148,7 @@ def train(args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_tr
                 output_t, output_sup1, output_sup2 = model_G(data)
                 D_out = model_D(F.softmax(output_t))
                 loss_adv = loss_func_adv(D_out , Variable(torch.FloatTensor(D_out.data.size()).fill_(source_label)).cuda() )  # I MIDIFIED THOSE TRY TO FOOL THE DISC
-                loss_adv = loss_adv * args.lambda_adv#0.001 or 0.01 CHECK
+                loss_adv = loss_adv * args.lambda_adv
 
             scaler.scale(loss_adv).backward()
 
