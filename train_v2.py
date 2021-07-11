@@ -364,8 +364,8 @@ def main(params):
         curr_epoch = state["epoch"]
         max_miou = state["max_miou"]
         print(str(curr_epoch) + " already trained")
-        print("start training from epoch " + str(curr_epoch))
-        print('Done!')
+        print("start training from epoch " + str(curr_epoch + 1))
+        #print('Done!')
 
     # train
     train (args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_train, CamVid_dataloader_val, IDDA_dataloader, curr_epoch, max_miou)
