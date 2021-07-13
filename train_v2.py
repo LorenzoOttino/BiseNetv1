@@ -7,9 +7,9 @@ from dataset.CamVid import CamVid
 from dataset.IDDA import IDDA
 import os
 from model.build_BiSeNet import BiSeNet
-from model.discriminator_dropout import Discriminator as Discriminator_Dropout
-from model.discriminator_fullyConv import Discriminator 
-from model.depthWise_Separable_discriminator import DW_Discriminator , depthwise_separable_conv 
+from model.discriminator_dropout import Discriminator as DR                                             # Fully Connected + Dropout (DR)
+from model.discriminator_fullyConv import Discriminator as FC                                           # Fully Convolutional (FC) 
+from model.depthWise_Separable_discriminator import DW_Discriminator , depthwise_separable_conv  as DW  # depthwise_separable_conv (DW) 
 import torch
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
@@ -257,7 +257,7 @@ def main(params):
     parser.add_argument('--loss', type=str, default='dice', help='loss function, dice or crossentropy')
     parser.add_argument('--loss_G', type=str, default='dice', help='loss function, dice or crossentropy')
     parser.add_argument('--lambda_adv', type=float, default=0.01, help='lambda coefficient for adversarial loss')
-    parser.add_argument('--discrim', type=str, default='DW', help='Discriminator to use - options: DepthWise (DW) , Fully Convolutional (FC) or Fully Connected + Dropout (DR) ')
+    parser.add_argument('--discrim', type=str, default='DW', help='Discriminator to use - options: DepthWise (DW) , Fully Convolutional (FC) or Fully Connected + Dropout (DR)')
 
     args = parser.parse_args(params)
 
