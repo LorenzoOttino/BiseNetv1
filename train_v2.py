@@ -328,13 +328,13 @@ def main(params):
     # Build Discriminator Model => model_D
     # =====================================================
     if args.discrim == 'DW':
-        model_D = DW_Discriminator(args.num_classes)
+        model_D = DW(args.num_classes)
     elif args.discrim == 'DR':
-        model_D = Discriminator_Dropout(args.num_classes)
+        model_D = DR(args.num_classes)
     else:
         if args.discrim != 'FC':
             print("Warning: --discrim bad argument")
-        model_D = Discriminator(args.num_classes)
+        model_D = FC(args.num_classes)
 
 
     if torch.cuda.is_available() and args.use_gpu:
