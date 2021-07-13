@@ -63,14 +63,10 @@ class IDDA(torch.utils.data.Dataset):
         label = self.__toCamVid(label)
 
         #apply augmentation
-        # ===================================
-        # Image augmentation ## Horizontal Flipping ##
         img, label = augmentation(img, label)
-        
-        # Pixel augmentation ## Gaussian Blur ##
         if random.randint(0,1) == 1:
               img = augmentation_pixel(img)
-        
+
         img = Image.fromarray(img)
         img = self.to_tensor(img).float()
 

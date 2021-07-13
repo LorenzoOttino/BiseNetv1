@@ -85,14 +85,12 @@ class CamVid(torch.utils.data.Dataset):
         label = np.array(label)
 
 
-        # augment image and label ## Horizontal Flipping ##
-        # =====================================
+        # augment image and label
         if self.mode == 'train':
             # set a probability of 0.5
             img, label = augmentation(img, label)
 
-        # augment pixel image ## Gaussian Blur ## 
-        # =====================================
+        # augment pixel image
         if self.mode == 'train':
             # set a probability of 0.5
             if random.randint(0,1) == 1:

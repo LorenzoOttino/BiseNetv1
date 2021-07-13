@@ -7,8 +7,7 @@ from dataset.CamVid import CamVid
 from dataset.IDDA import IDDA
 import os
 from model.build_BiSeNet import BiSeNet
-from model.discriminator_dropout import Discriminator as Discriminator_Dropout
-from model.discriminator_fullyConv import Discriminator 
+from model.discriminator import Discriminator 
 from model.depthWise_Separable_discriminator import DW_Discriminator , depthwise_separable_conv 
 import torch
 from tensorboardX import SummaryWriter
@@ -25,7 +24,7 @@ import torch.cuda.amp as amp
 
 def val(args, model_G,dataloader ):
     print('start val!')
-    
+    # label_info = get_label_info(csv_path)
     with torch.no_grad():
         model_G.eval()
         precision_record = []
@@ -51,6 +50,9 @@ def val(args, model_G,dataloader ):
             precision = compute_global_accuracy(predict, label)
             hist += fast_hist(label.flatten(), predict.flatten(), args.num_classes)
 
+            # there is no need to transform the one-hot array to visual RGB array
+            # predict = colour_code_segmentation(np.array(predict), label_info)
+            # label = colour_code_segmentation(np.array(label), label_info)
             precision_record.append(precision)
         precision = np.mean(precision_record)
         # miou = np.mean(per_class_iu(hist))
@@ -68,8 +70,8 @@ def val(args, model_G,dataloader ):
 
 
 def train(args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_train, CamVid_dataloader_val, IDDA_dataloader, curr_epoch, max_miou): 
-
-    writer = SummaryWriter(comment=''.format(args.optimizer_G,args.optimizer_D, args.context_path))
+# we need the camvid data loader an modify the dataloadrer val we don't need the data loader train because we use Idda dataloader 
+    writer = SummaryWriter(comment=''.format(args.optimizer_G,args.optimizer_D, args.context_path))#not important for now
 
 
     scaler = amp.GradScaler()
@@ -95,8 +97,8 @@ def train(args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_tr
         target_label = 1
         # iniate lists to track the losses 
         loss_G_record = []
-        loss_adv_record = []  #list to track the advarsirial loss of generator
-        loss_D_record = []     #list to track the discriminator loss 
+        loss_adv_record = []  # we added a new list to track the advarsirial loss of generator
+        loss_D_record = []     # we added a new list to track the discriminator loss 
         
         source_train_loader = enumerate(IDDA_dataloader)
         s_size = len(IDDA_dataloader)
@@ -145,7 +147,7 @@ def train(args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_tr
                 output_t, output_sup1, output_sup2 = model_G(data)
                 D_out = model_D(F.softmax(output_t))
                 loss_adv = loss_func_adv(D_out , Variable(torch.FloatTensor(D_out.data.size()).fill_(source_label)).cuda() )  # I MIDIFIED THOSE TRY TO FOOL THE DISC
-                loss_adv = loss_adv * args.lambda_adv
+                loss_adv = loss_adv * args.lambda_adv#0.001 or 0.01 CHECK
 
             scaler.scale(loss_adv).backward()
 
@@ -193,8 +195,11 @@ def train(args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_tr
         writer.add_scalar('epoch/loss_G_train_mean', float(loss_G_train_mean), epoch)
         writer.add_scalar('epoch/loss_adv_train_mean', float(loss_adv_train_mean), epoch)
         writer.add_scalar('epoch/loss_D_train_mean', float(loss_D_train_mean), epoch)
-
     
+        
+        
+        
+        #the checkpoint needs rewriting
         
         if epoch % args.checkpoint_step == 0 and epoch != 0:
             if not os.path.isdir(args.save_model_path):
@@ -257,7 +262,6 @@ def main(params):
     parser.add_argument('--loss', type=str, default='dice', help='loss function, dice or crossentropy')
     parser.add_argument('--loss_G', type=str, default='dice', help='loss function, dice or crossentropy')
     parser.add_argument('--lambda_adv', type=float, default=0.01, help='lambda coefficient for adversarial loss')
-    parser.add_argument('--discrim', type=str, default='DW', help='Discriminator to use - options: DepthWise (DW) , Fully Convolutional (FC) or Fully Connected + Dropout (DR) ')
 
     args = parser.parse_args(params)
 
@@ -309,16 +313,7 @@ def main(params):
         model_G = torch.nn.DataParallel(model_G).cuda()
         
     #build model_D
-    if args.discrim == 'DW':
-        model_D = DW_Discriminator(args.num_classes)
-    elif args.discrim == 'DR':
-        model_D = Discriminator_Dropout(args.num_classes)
-    else:
-        if args.discrim != 'FC':
-            print("Warning: --discrim bad argument")
-        model_D = Discriminator(args.num_classes)
-
-
+    model_D = DW_Discriminator(args.num_classes)
     if torch.cuda.is_available() and args.use_gpu:
         model_D = torch.nn.DataParallel(model_D).cuda()
 
@@ -358,8 +353,8 @@ def main(params):
         curr_epoch = state["epoch"]
         max_miou = state["max_miou"]
         print(str(curr_epoch) + " already trained")
-        print("start training from epoch " + str(curr_epoch + 1))
-        #print('Done!')
+        print("start training from epoch " + str(curr_epoch))
+        print('Done!')
 
     # train
     train (args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_train, CamVid_dataloader_val, IDDA_dataloader, curr_epoch, max_miou)
@@ -385,8 +380,7 @@ if __name__ == '__main__':
          #'--pretrained_model_path', './checkpoints_adversarial_DepthWise/latest_dice_loss.pth',   # modify this to your path
         '--checkpoint_step', '2',
         '--validation_step' , '2',
-        '--lambda_adv', '0.001',
-        '--discrim', 'DW'               # choose Discriminator Network DepthWise (DW) , Fully Convolutional (FC) or Fully Connected + Dropout (DR)
+        '--lambda_adv', '0.001'
 
     ]
     main(params)

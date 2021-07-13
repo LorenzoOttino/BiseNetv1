@@ -5,8 +5,6 @@ from torch import nn
 class Discriminator(nn.Module):
     def __init__(self, num_classes):
         super(Discriminator, self).__init__()
-
-
         self.conv1 = nn.Conv2d(num_classes, 64, (4*4), 2, bias=False)
         self.conv2 = nn.Conv2d(64, 128, (4*4), 2, bias=False)
         self.conv3 = nn.Conv2d(128, 256, (4 * 4), 2, bias=False)

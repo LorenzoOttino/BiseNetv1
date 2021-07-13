@@ -26,6 +26,7 @@ def poly_lr_scheduler(optimizer, init_lr, iter, lr_decay_iter=1,
 	lr = init_lr*(1 - iter/max_iter)**power
 	optimizer.param_groups[0]['lr'] = lr
 	return lr
+	# return lr
 
 def get_label_info(csv_path):
 	# return label -> {label_name: [r_value, g_value, b_value, ...}
