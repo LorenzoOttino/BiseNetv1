@@ -12,12 +12,12 @@ Note: classes_info.json file needs to be modified by changing the first couple o
   
 ## Train
 ```
-python train.py
+python bise_train.py
 ```  
 
 ## Adversarial Train
 ```
-python train_v2.py
+python adversarial_train.py
 ```  
 
 ## Test
