@@ -94,9 +94,9 @@ def train(args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_tr
         source_label = 0
         target_label = 1
         # iniate lists to track the losses 
-        loss_G_record = []
-        loss_adv_record = []  #list to track the advarsirial loss of generator
-        loss_D_record = []     #list to track the discriminator loss 
+        loss_G_record = []                                                       # track the Segmentation loss
+        loss_adv_record = []                                                     # track the advarsirial loss 
+        loss_D_record = []                                                       # track the discriminator loss 
         
         source_train_loader = enumerate(IDDA_dataloader)
         s_size = len(IDDA_dataloader)
@@ -107,13 +107,16 @@ def train(args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_tr
 
             optimizer_G.zero_grad()
             optimizer_D.zero_grad()
-
-        #train G:
+            
+        # =====================================
+        # train Generator G:
+        # =====================================
         
             for param in model_D.parameters():
                 param.requires_grad = False
 
-            #train with source:
+            # Train with source:
+            # =================================
 
             _, batch = next(source_train_loader)
             data, label = batch
@@ -130,7 +133,8 @@ def train(args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_tr
 
             scaler.scale(loss_G).backward()
 
-            #train with target:
+            # Train with target: 
+            # =================================
 
             #try:
             _, batch = next(target_loader)
@@ -144,25 +148,30 @@ def train(args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_tr
 
                 output_t, output_sup1, output_sup2 = model_G(data)
                 D_out = model_D(F.softmax(output_t))
-                loss_adv = loss_func_adv(D_out , Variable(torch.FloatTensor(D_out.data.size()).fill_(source_label)).cuda() )  # I MIDIFIED THOSE TRY TO FOOL THE DISC
+                loss_adv = loss_func_adv(D_out , Variable(torch.FloatTensor(D_out.data.size()).fill_(source_label)).cuda() )  # Generator try to fool the discriminator 
                 loss_adv = loss_adv * args.lambda_adv
 
             scaler.scale(loss_adv).backward()
-
-        # train D:
+            
+        # =====================================
+        # train Discriminator D:
+        # =====================================
+        
             for param in model_D.parameters():
                 param.requires_grad = True
 
-            #train with source:
+            # Train with source:
+            # =================================
 
             output_s = output_s.detach()
             with amp.autocast():
-                D_out = model_D(F.softmax(output_s))  # we feed the discriminator with the output of the model
-                loss_D = loss_func_D(D_out, Variable(torch.FloatTensor(D_out.data.size()).fill_(source_label)).cuda())   # add the adversarial loss
+                D_out = model_D(F.softmax(output_s))                                                                   # we feed the discriminator with the output of the G-model
+                loss_D = loss_func_D(D_out, Variable(torch.FloatTensor(D_out.data.size()).fill_(source_label)).cuda())   
                 loss_D = loss_D / 2
             scaler.scale(loss_D).backward()
 
-            #train with target:
+            # Train with target:
+            # =================================
 
             output_t = output_t.detach()
             with amp.autocast():
@@ -262,6 +271,8 @@ def main(params):
     args = parser.parse_args(params)
 
     # create dataset and dataloader for CamVid
+    # =================================================================
+    
     CamVid_train_path = [os.path.join(args.data_CamVid, 'train'), os.path.join(args.data_CamVid, 'val')]
     CamVid_train_label_path = [os.path.join(args.data_CamVid, 'train_labels'),
                                os.path.join(args.data_CamVid, 'val_labels')]
@@ -290,6 +301,8 @@ def main(params):
     )
 
     # create dataset and dataloader for IDDA
+    # =================================================================
+    
     IDDA_path = os.path.join(args.data_IDDA, 'rgb')
     IDDA_label_path = os.path.join(args.data_IDDA, 'labels')
     IDDA_info_path = os.path.join(args.data_IDDA, 'classes_info.json')
@@ -302,13 +315,15 @@ def main(params):
         drop_last=True
     )
 
-    # build model_G
+    # Build Generator Model => model_G
+    # =====================================================
     os.environ['CUDA_VISIBLE_DEVICES'] = args.cuda
     model_G = BiSeNet(args.num_classes, args.context_path)
     if torch.cuda.is_available() and args.use_gpu:
         model_G = torch.nn.DataParallel(model_G).cuda()
         
-    #build model_D
+    # Build Discriminator Model => model_D
+    # =====================================================
     if args.discrim == 'DW':
         model_D = DW_Discriminator(args.num_classes)
     elif args.discrim == 'DR':
@@ -321,8 +336,10 @@ def main(params):
 
     if torch.cuda.is_available() and args.use_gpu:
         model_D = torch.nn.DataParallel(model_D).cuda()
+        
 
-    # build optimizer G
+    # Build optimizer G
+    # =====================================================
     if args.optimizer_G == 'rmsprop':
         optimizer_G = torch.optim.RMSprop(model_G.parameters(), args.learning_rate_G)
     elif args.optimizer_G == 'sgd':
@@ -333,7 +350,8 @@ def main(params):
         print('not supported optimizer \n')
         return None
 
-    # build optimizer D
+    # Build optimizer D
+    # =====================================================
     if args.optimizer_D == 'rmsprop':
         optimizer_D = torch.optim.RMSprop(model_D.parameters(), args.learning_rate_D)
     elif args.optimizer_D == 'sgd':
@@ -377,7 +395,7 @@ if __name__ == '__main__':
         '--num_workers', '8',
         '--num_classes', '12',
         '--cuda', '0',
-        '--batch_size', '4',
+        '--batch_size', '4',                                           # Recommended batch size = 4 
         '--save_model_path', './checkpoints_adversarial_DepthWise',  # modify this to your path
         '--context_path', 'resnet101',  # set resnet18 or resnet101, only support resnet18 and resnet101
         '--optimizer_G', 'sgd',
