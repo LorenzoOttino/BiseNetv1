@@ -25,7 +25,7 @@ import torch.cuda.amp as amp
 
 def val(args, model_G,dataloader ):
     print('start val!')
-    # label_info = get_label_info(csv_path)
+    
     with torch.no_grad():
         model_G.eval()
         precision_record = []
@@ -51,9 +51,6 @@ def val(args, model_G,dataloader ):
             precision = compute_global_accuracy(predict, label)
             hist += fast_hist(label.flatten(), predict.flatten(), args.num_classes)
 
-            # there is no need to transform the one-hot array to visual RGB array
-            # predict = colour_code_segmentation(np.array(predict), label_info)
-            # label = colour_code_segmentation(np.array(label), label_info)
             precision_record.append(precision)
         precision = np.mean(precision_record)
         # miou = np.mean(per_class_iu(hist))
@@ -71,8 +68,8 @@ def val(args, model_G,dataloader ):
 
 
 def train(args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_train, CamVid_dataloader_val, IDDA_dataloader, curr_epoch, max_miou): 
-# we need the camvid data loader an modify the dataloadrer val we don't need the data loader train because we use Idda dataloader 
-    writer = SummaryWriter(comment=''.format(args.optimizer_G,args.optimizer_D, args.context_path))#not important for now
+
+    writer = SummaryWriter(comment=''.format(args.optimizer_G,args.optimizer_D, args.context_path))
 
 
     scaler = amp.GradScaler()
@@ -98,8 +95,8 @@ def train(args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_tr
         target_label = 1
         # iniate lists to track the losses 
         loss_G_record = []
-        loss_adv_record = []  # we added a new list to track the advarsirial loss of generator
-        loss_D_record = []     # we added a new list to track the discriminator loss 
+        loss_adv_record = []  #list to track the advarsirial loss of generator
+        loss_D_record = []     #list to track the discriminator loss 
         
         source_train_loader = enumerate(IDDA_dataloader)
         s_size = len(IDDA_dataloader)
@@ -196,11 +193,8 @@ def train(args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_tr
         writer.add_scalar('epoch/loss_G_train_mean', float(loss_G_train_mean), epoch)
         writer.add_scalar('epoch/loss_adv_train_mean', float(loss_adv_train_mean), epoch)
         writer.add_scalar('epoch/loss_D_train_mean', float(loss_D_train_mean), epoch)
+
     
-        
-        
-        
-        #the checkpoint needs rewriting
         
         if epoch % args.checkpoint_step == 0 and epoch != 0:
             if not os.path.isdir(args.save_model_path):

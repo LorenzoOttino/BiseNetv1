@@ -2,7 +2,6 @@ import torch
 from torch import nn
 
 
-# model based on paper 6 and https://pytorch.org/tutorials/beginner/dcgan_faces_tutorial.html
 class DW_Discriminator(nn.Module) :
     def __init__(self, num_classes):
         super(DW_Discriminator, self).__init__()
