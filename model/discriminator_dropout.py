@@ -5,31 +5,11 @@ from torch import nn
 class Discriminator(nn.Module):
     def __init__(self, num_classes):
         super(Discriminator, self).__init__()
-        """self.main = nn.Sequential(
-            # layer 1
-            nn.Conv2d(num_classes, 64, (4*4), 2, bias=False),
-            nn.LeakyReLU(0.2, inplace=True),
-            # layer 2
-            nn.Conv2d(64, 128, (4*4), 2, bias=False),
-            nn.LeakyReLU(0.2, inplace=True),
-            # layer 3
-            nn.Conv2d(128 , 256, (4*4), 2, bias=False),
-            nn.LeakyReLU(0.2, inplace=True),
-            # layer 4
-            nn.Conv2d(256, 512, (4*4), 2, bias=False),
-            nn.LeakyReLU(0.2, inplace=True),
-            # layer 5
-            nn.Conv2d(512, 1, (4*4), 2, bias=False),
-            nn.Upsample(scale_factor=32, mode='bilinear') #https://pytorch.org/docs/stable/generated/torch.nn.Upsample.html
-        )"""
-
-
         self.conv1 = nn.Conv2d(num_classes, 64, (4*4), 2, bias=False)
         self.conv2 = nn.Conv2d(64, 128, (4*4), 2, bias=False)
         self.conv3 = nn.Conv2d(128, 256, (4 * 4), 2, bias=False)
         self.conv4 = nn.Conv2d(256, 512, (4*4), 2, bias=False)
         self.conv5 = nn.Conv2d(512, 1, (4*4), 2, bias=False)
-        self.up = nn.Upsample(scale_factor=64)
         self.relu = nn.LeakyReLU(0.2, inplace=True)
         self.flatten = nn.Flatten()
         self.fc = nn.Linear(128, 64)
@@ -37,23 +17,17 @@ class Discriminator(nn.Module):
 
 
     def forward(self, input):
-        #print("input =   " + str(input.shape))
+        # layer 1:
         x = self.relu(self.conv1(input))
-        #print("1 =   " + str(x.shape))
+        # layer 2:
         x = self.relu(self.conv2(x))
-        #print("2 =   " + str(x.shape))
+        # layer 3:
         x = self.relu(self.conv3(x))
-        #print("3 =   " + str(x.shape))
+        # layer 4:
         x = self.relu(self.conv4(x))
-        #print("4 =   " + str(x.shape))
+        # layer 5:
         x = self.conv5(x)
-        #print("5 =   " + str(x.shape))
+        # layer 6(fully connected layer + dropout instead of upsampling):
         x = self.flatten(x)
-        #print("flatten =   " + str(x.shape))
-        x = self.drop(self.fc(x)) #only here
-        #print("fully =   " + str(x.shape))
-        #x = torch.reshape(x,(4,1,4,16))
-        #x = self.up(x)
-        #print("up =   " + str(x.shape))
+        x = self.drop(self.fc(x))
         return x
-        #return self.main(input)
