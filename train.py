@@ -49,7 +49,6 @@ def val(args, model, dataloader):
             precision = compute_global_accuracy(predict, label)
             hist += fast_hist(label.flatten(), predict.flatten(), args.num_classes)
 
-            # there is no need to transform the one-hot array to visual RGB array
             # predict = colour_code_segmentation(np.array(predict), label_info)
             # label = colour_code_segmentation(np.array(label), label_info)
             precision_record.append(precision)
