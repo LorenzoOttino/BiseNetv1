@@ -9,7 +9,7 @@ import os
 from model.build_BiSeNet import BiSeNet
 from model.discriminator_dropout import Discriminator as DR                                             # Fully Connected + Dropout (DR)
 from model.discriminator_fullyConv import Discriminator as FC                                           # Fully Convolutional (FC) 
-from model.depthWise_Separable_discriminator import DW_Discriminator , depthwise_separable_conv  as DW  # depthwise_separable_conv (DW) 
+from model.depthWise_Separable_discriminator import DW_Discriminator , depthwise_separable_conv  # depthwise_separable_conv (DW) 
 import torch
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
@@ -328,7 +328,7 @@ def main(params):
     # Build Discriminator Model => model_D
     # =====================================================
     if args.discrim == 'DW':
-        model_D = DW(args.num_classes)
+        model_D = DW_Discriminator(args.num_classes)
     elif args.discrim == 'DR':
         model_D = DR(args.num_classes)
     else:

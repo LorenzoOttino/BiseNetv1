@@ -192,15 +192,14 @@ def main(params):
     IDDA_path = [os.path.join(args.data_IDDA, 'rgb')]
     IDDA_label_path = [os.path.join(args.data_IDDA, 'labels')]
     IDDA_csv_path = os.path.join(args.data_IDDA, 'classes_info.json')
-    IDDA_dataset = IDDA(IDDA_path, IDDA_label_path, IDDA_csv_path, scale=(args.crop_height, args.crop_width),
-                           loss=args.loss, mode='train')
-    IDDA_dataloader = DataLoader(
-        IDDA_dataset,
-        batch_size=args.batch_size,
-        shuffle=True,
-        num_workers=args.num_workers,
-        drop_last=True
-    )
+    #IDDA_dataset = IDDA(IDDA_path, IDDA_label_path, IDDA_csv_path, scale=(args.crop_height, args.crop_width), loss=args.loss, csv_path=CamVid_csv_path)
+    #IDDA_dataloader = DataLoader(
+    #    IDDA_dataset,
+    #    batch_size=args.batch_size,
+    #    shuffle=True,
+    #    num_workers=args.num_workers,
+    #    drop_last=True
+    #)
 
 
     # build model
