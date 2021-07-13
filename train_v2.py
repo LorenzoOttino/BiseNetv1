@@ -93,7 +93,7 @@ def train(args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_tr
         # set the ground truth for the discriminator
         source_label = 0
         target_label = 1
-        # iniate lists to track the losses 
+        # initiate lists to track the losses
         loss_G_record = []                                                       # track the Segmentation loss
         loss_adv_record = []                                                     # track the advarsirial loss 
         loss_D_record = []                                                       # track the discriminator loss 
@@ -120,7 +120,6 @@ def train(args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_tr
 
             _, batch = next(source_train_loader)
             data, label = batch
-            #label = label.type(torch.LongTensor)
             data = data.cuda()
             label = label.long().cuda()
 
@@ -136,8 +135,12 @@ def train(args, model_G, model_D, optimizer_G, optimizer_D, CamVid_dataloader_tr
             # Train with target: 
             # =================================
 
-            #try:
+            # for training with CamVid size:
             _, batch = next(target_loader)
+
+            # for training with IDDA size:
+            # try:
+            #_, batch = next(target_loader)
             #except:
             #    target_loader = enumerate(CamVid_dataloader_train)
             #    _, batch = next(target_loader)
