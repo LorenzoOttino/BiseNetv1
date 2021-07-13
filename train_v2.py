@@ -257,7 +257,7 @@ def main(params):
     parser.add_argument('--loss', type=str, default='dice', help='loss function, dice or crossentropy')
     parser.add_argument('--loss_G', type=str, default='dice', help='loss function, dice or crossentropy')
     parser.add_argument('--lambda_adv', type=float, default=0.01, help='lambda coefficient for adversarial loss')
-    parser.add_argument('--discrim', type=str, default='DW', help='Discriminator to use - options: "DW", "DR" or "FC" ')
+    parser.add_argument('--discrim', type=str, default='DW', help='Discriminator to use - options: DepthWise (DW) , Fully Convolutional (FC) or Fully Connected + Dropout (DR) ')
 
     args = parser.parse_args(params)
 
@@ -386,7 +386,7 @@ if __name__ == '__main__':
         '--checkpoint_step', '2',
         '--validation_step' , '2',
         '--lambda_adv', '0.001',
-        '--discrim', 'DW'
+        '--discrim', 'DW'               # choose Discriminator Network DepthWise (DW) , Fully Convolutional (FC) or Fully Connected + Dropout (DR)
 
     ]
     main(params)
