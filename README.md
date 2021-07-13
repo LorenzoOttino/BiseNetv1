@@ -12,7 +12,7 @@ Note: classes_info.json file needs to be modified by changing the first couple o
   
 ## Train
 ```
-python bise_train.py
+python segmentation_train.py
 ```  
 
 ## Adversarial Train
